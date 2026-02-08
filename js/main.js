@@ -26,6 +26,7 @@ const coreE = $('core');
 const scE = $('sc');
 const hint = $('hint');
 const nf = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+const fmt = (v) => (v >= 1000 ? nf.format(v) : `${Math.floor(v)}`);
 
 addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -409,7 +410,22 @@ function mkBar() {
     s += `<button data-i=${i} class=${i === sw ? 'on' : ''} title="${weapon.n} · ${weapon.c}c">${weapon.i}</button>`;
   }
   ws.innerHTML = s;
-  upB.disabled = !(sel >= 0 && tier[sel] < 9);
+  if (sel >= 0) {
+    const t = tier[sel];
+    const ch = T[tt[sel]];
+    const we = W[tw[sel]];
+    const base = ch.c + we.c * 0.72;
+    const cost = (base * (0.58 + 0.62 * t) * (1 + 0.03 * wave)) | 0;
+    const nextTier = t + 1;
+    let tipText = `Upgrade to Tier ${nextTier} — Cost ${fmt(cost)}c`;
+    if (t >= 9) tipText += ' (Max level)';
+    else if (money < cost) tipText += ` (Need ${fmt(cost - money)} more credits)`;
+    upB.title = tipText;
+    upB.disabled = t >= 9 || money < cost;
+  } else {
+    upB.disabled = true;
+    upB.title = '';
+  }
   hint.textContent = dead
     ? 'Run ended. Restart from menu with R.'
     : paused
