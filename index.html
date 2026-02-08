@@ -4,6 +4,7 @@
 #hud{position:fixed;top:10px;left:10px;display:flex;gap:10px;align-items:flex-end;padding:10px 12px;border-radius:14px;border:1px solid var(--bd);background:color-mix(in oklab,#0b1020 84%,transparent);backdrop-filter:blur(10px) saturate(1.2);user-select:none}
 .k{display:flex;flex-direction:column;gap:2px;min-width:86px}.k b{font-size:18px;letter-spacing:.2px}.k span{font-size:10px;opacity:.7;letter-spacing:1.1px}
 #panel{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:16px;border:1px solid var(--bd);background:color-mix(in oklab,#0b1020 84%,transparent);backdrop-filter:blur(10px) saturate(1.2);user-select:none}
+#sig{position:fixed;right:12px;top:12px;width:78px;height:78px;opacity:.75;filter:drop-shadow(0 6px 18px #0008)}
 #note{position:fixed;left:50%;top:10px;transform:translateX(-50%);padding:8px 12px;border-radius:999px;border:1px solid color-mix(in oklab,#8cf 24%,#000);background:color-mix(in oklab,#0b1020 82%,transparent);backdrop-filter:blur(10px) saturate(1.2);font-size:11px;letter-spacing:.3px;opacity:0;transition:.2s opacity, .2s transform;pointer-events:none}
 #note.show{opacity:1;transform:translate(-50%,0)}
 .slot{display:flex;gap:6px;align-items:center}
@@ -34,14 +35,23 @@
   <div class=k><b id=wave>1</b><span>WAVE</span></div>
   <div class=k><b id=core>50</b><span>CORE</span></div>
   <div class=k><b id=cr>0</b><span>CREDITS</span></div>
-  <div class=k><b id=bk>0</b><span>BANK</span></div>
   <div class=k><b id=sc>1</b><span>BEST WAVE</span></div>
 </div>
 <div id=note></div>
+<svg id=sig viewBox="0 0 120 120" aria-hidden=true>
+  <defs><radialGradient id=sg cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#7ff"/><stop offset=".7" stop-color="#36b"/><stop offset="1" stop-color="#0000"/></radialGradient></defs>
+  <circle cx="60" cy="60" r="44" fill="url(#sg)" opacity=".65"/>
+  <g id=sgn fill="none" stroke="#9ef" stroke-width="2" stroke-linecap="round" opacity=".8">
+    <circle cx="60" cy="60" r="32"/>
+    <path d="M20 60h80M60 20v80"/>
+    <circle cx="60" cy="60" r="10" fill="#cfe"/>
+  </g>
+</svg>
 
 <div id=panel>
   <div class=slot id=ts></div>
   <div class=slot id=ws></div>
+  <div class=slot id=speed></div>
   <button id=up disabled>Upgrade</button>
   <div id=hint></div>
 </div>
@@ -56,7 +66,7 @@
     <div class=col><h2>Weapons <i id=wc>0/3</i></h2><div class=grid id=wl></div></div>
   </div>
   <div class=row><button id=start disabled>Start</button><button id=rand>Random</button><button id=preset>Preset</button></div>
-  <div class=small>Controls: click empty space to place. Click tower to select. Upgrade button or U upgrades selected tower. Right click tower to sell. Q/E cycle chassis. 1-3 select weapon. Alt click selected tower to cycle weapon. Space pause.</div>
+  <div class=small>Controls: click empty space to place. Click tower to select. Upgrade button or U upgrades selected tower. Right click tower to sell. Q/E cycle chassis. 1-3 select weapon. Space pause.</div>
 </div></div>
 
 <script type=module src="./js/main.js"></script>

@@ -1,4 +1,4 @@
-import { TOWERS, WEAPONS, ENEMIES, BOSS } from './data.js';
+import { TOWERS, WEAPONS, ENEMIES, BOSS, MEGA_BOSS } from './data.js';
 import { clamp, dist2, rng, hsl } from './utils.js';
 
 const $ = (id) => document.getElementById(id);
@@ -14,12 +14,14 @@ const rand = $('rand');
 const preset = $('preset');
 const ts = $('ts');
 const ws = $('ws');
+const speed = $('speed');
 const upB = $('up');
 const tip = $('tip');
 const note = $('note');
+const sig = $('sig');
+const sgn = $('sgn');
 const waveE = $('wave');
 const crE = $('cr');
-const bkE = $('bk');
 const coreE = $('core');
 const scE = $('sc');
 const hint = $('hint');
@@ -27,8 +29,8 @@ const nf = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDig
 
 addEventListener('contextmenu', (e) => e.preventDefault());
 
-let selT = [0, 1, 5, 9];
-let selW = [0, 3, 4];
+let selT = [0, 1, 3, 8];
+let selW = [0, 1, 2];
 let st = 0;
 let sw = 0;
 let paused = 0;
@@ -84,8 +86,8 @@ menu.addEventListener('click', (e) => {
 });
 
 preset.onclick = () => {
-  selT = [0, 1, 5, 9];
-  selW = [0, 3, 4];
+  selT = [0, 1, 3, 8];
+  selW = [0, 1, 2];
   applySel();
 };
 
@@ -123,6 +125,7 @@ let tSpr = [];
 let wSpr = [];
 let eSpr = [];
 let bSpr;
+let megaSpr;
 
 function shape(g, k, x, y, r) {
   const m = k % 8;
@@ -224,7 +227,7 @@ function mkSpr(out, items, sz, ofs, shade) {
   }
 }
 
-function mkBoss() {
+function mkBoss(boss) {
   const cv = document.createElement('canvas');
   const sz = 80;
   const S = (sz * dpr) | 0;
@@ -241,17 +244,17 @@ function mkBoss() {
   gr.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = gr;
   g.fillRect(0, 0, sz, sz);
-  g.fillStyle = 'rgba(255,170,80,.85)';
+  g.fillStyle = boss === MEGA_BOSS ? 'rgba(255,110,120,.85)' : 'rgba(255,170,80,.85)';
   shape(g, 7, x, y, r);
   g.fill();
-  g.strokeStyle = 'rgba(255,210,150,.5)';
+  g.strokeStyle = boss === MEGA_BOSS ? 'rgba(255,120,160,.6)' : 'rgba(255,210,150,.5)';
   g.lineWidth = 3;
   g.stroke();
   g.font = `${sz * 0.56}px system-ui,Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillStyle = 'rgba(255,255,255,.98)';
-  g.fillText(BOSS.i, x, y + 1);
+  g.fillText(boss.i, x, y + 1);
   return cv;
 }
 
@@ -330,7 +333,8 @@ function resize() {
   mkSpr(tSpr, T, 54, 10, 0.9);
   mkSpr(wSpr, W, 42, 180, 0.86);
   mkSpr(eSpr, E, 46, 300, 0.9);
-  bSpr = mkBoss();
+  bSpr = mkBoss(BOSS);
+  megaSpr = mkBoss(MEGA_BOSS);
 }
 
 addEventListener('resize', resize, { passive: true });
@@ -386,15 +390,24 @@ let noteT = 0;
 let pendingPacks = 0;
 let spawnTick = 0;
 let bossPending = 0;
+let megaPending = 0;
+let timeScale = 1;
+let sigStep = 0;
 const use = new Uint16Array(10);
 const toInt = (v) => Math.max(0, Math.floor(v));
 
 function mkBar() {
   let s = '';
-  for (let i = 0; i < selT.length; i++) s += `<button data-i=${i} class=${i === st ? 'on' : ''}>${T[selT[i]].i}</button>`;
+  for (let i = 0; i < selT.length; i++) {
+    const tower = T[selT[i]];
+    s += `<button data-i=${i} class=${i === st ? 'on' : ''} title="${tower.n} · ${tower.c}c">${tower.i}</button>`;
+  }
   ts.innerHTML = s;
   s = '';
-  for (let i = 0; i < selW.length; i++) s += `<button data-i=${i} class=${i === sw ? 'on' : ''}>${W[selW[i]].i}</button>`;
+  for (let i = 0; i < selW.length; i++) {
+    const weapon = W[selW[i]];
+    s += `<button data-i=${i} class=${i === sw ? 'on' : ''} title="${weapon.n} · ${weapon.c}c">${weapon.i}</button>`;
+  }
   ws.innerHTML = s;
   upB.disabled = !(sel >= 0 && tier[sel] < 9);
   hint.textContent = dead
@@ -442,8 +455,12 @@ function resetRun() {
   pendingPacks = 0;
   spawnTick = 0;
   bossPending = 0;
+  megaPending = 0;
+  timeScale = 1;
+  sigStep = 0;
   note.classList.remove('show');
   note.textContent = '';
+  setSpeed(0);
   mkBar();
 }
 
@@ -454,7 +471,7 @@ function waveBudget() {
 function spawnPack(isBoss) {
   if (en >= ME - 2) return;
   const k = (rng() * E.length) | 0;
-  const e = isBoss ? BOSS : E[k];
+  const e = isBoss === 2 ? MEGA_BOSS : isBoss ? BOSS : E[k];
   const base = waveBudget();
   const cnt = isBoss ? 1 : Math.max(1, (base * e.c * (0.75 + rng() * 0.55)) | 0);
   const hpU = (1.8 + wave * 0.16) * e.hp * (0.78 + rng() * 0.55);
@@ -469,7 +486,7 @@ function spawnPack(isBoss) {
   ehu[i] = hpU;
   eh[i] = hpU * cnt;
   eb[i] = b;
-  eboss[i] = isBoss ? 1 : 0;
+  eboss[i] = isBoss ? isBoss : 0;
 }
 
 function spawnWave() {
@@ -477,7 +494,12 @@ function spawnWave() {
   pendingPacks = packs;
   spawnTick = 0;
   bossPending = wave % 5 === 0 ? 1 : 0;
-  showNote(bossPending ? `Wave ${wave}: boss incoming` : `Wave ${wave} inbound`);
+  megaPending = wave % 10 === 0 ? 1 : 0;
+  if (megaPending) {
+    showNote(`Wave ${wave}: abyss titan inbound`);
+  } else {
+    showNote(bossPending ? `Wave ${wave}: boss incoming` : `Wave ${wave} inbound`);
+  }
 }
 
 function dmgPack(i, dm) {
@@ -580,16 +602,6 @@ function upgrade(i) {
   mkBar();
 }
 
-function swapW(i) {
-  if (i < 0 || i >= tn || dead || paused) return;
-  const cur = tw[i];
-  let k = -1;
-  for (let j = 0; j < selW.length; j++) if (selW[j] === cur) k = j;
-  if (k < 0) k = 0;
-  tw[i] = selW[(k + 1) % selW.length];
-  mkBar();
-}
-
 function spawnFriendly(x, y, amt) {
   if (fn >= MF - 2) return;
   const i = fn++;
@@ -603,7 +615,6 @@ function spawnFriendly(x, y, amt) {
 function ui() {
   waveE.textContent = wave;
   crE.textContent = nf.format(money);
-  bkE.textContent = nf.format(bank);
   coreE.textContent = core | 0;
   scE.textContent = best;
 }
@@ -612,6 +623,11 @@ function showNote(text, time = 2.2) {
   note.textContent = text;
   note.classList.add('show');
   noteT = time;
+}
+
+function setSpeed(idx) {
+  timeScale = [1, 5, 50, 500][idx] || 1;
+  [...speed.children].forEach((btn, i) => btn.classList.toggle('on', i === idx));
 }
 
 function showTip() {
@@ -632,8 +648,9 @@ function showTip() {
   }
   if (hoverE >= 0) {
     const i = hoverE;
-    const name = eboss[i] ? BOSS.n : E[et[i]].n;
-    const icon = eboss[i] ? BOSS.i : E[et[i]].i;
+    const bossType = eboss[i];
+    const name = bossType === 2 ? MEGA_BOSS.n : bossType ? BOSS.n : E[et[i]].n;
+    const icon = bossType === 2 ? MEGA_BOSS.i : bossType ? BOSS.i : E[et[i]].i;
     tip.innerHTML = `${icon} ${name}<br>HP ${nf.format(eh[i])} | Count ${nf.format(ec[i])}`;
     tip.style.left = `${x + 14}px`;
     tip.style.top = `${y + 14}px`;
@@ -680,7 +697,16 @@ function upd(dt) {
       } else if (bossPending) {
         spawnPack(1);
         bossPending = 0;
+        if (megaPending) spawnTick = 0.6;
       }
+    }
+  }
+  if (megaPending && pendingPacks === 0 && bossPending === 0) {
+    spawnTick -= dt;
+    if (spawnTick <= 0) {
+      spawnPack(2);
+      megaPending = 0;
+      spawnTick = 0.6;
     }
   }
   if (noteT > 0) {
@@ -857,7 +883,7 @@ function draw() {
     if (n > 10) n = 10;
     const rr = size * 0.28;
     const ph = i * 0.41;
-    const spr = eboss[i] ? bSpr : eSpr[et[i] % eSpr.length];
+    const spr = eboss[i] === 2 ? megaSpr : eboss[i] ? bSpr : eSpr[et[i] % eSpr.length];
     for (let j = 0; j < n; j++) {
       const a = ph + (j * 6.283) / n;
       ctx.drawImage(spr, ex[i] - size * 0.5 + Math.cos(a) * rr, ey[i] - size * 0.5 + Math.sin(a) * rr, size, size);
@@ -927,9 +953,16 @@ function draw() {
 }
 
 function loop(t) {
-  const dt = Math.min(0.05, (t - lt) / 1000);
+  const raw = Math.min(0.1, (t - lt) / 1000);
   lt = t;
-  if (menu.style.display === 'none' && !paused && !dead) upd(dt);
+  if (menu.style.display === 'none' && !paused && !dead) {
+    let sim = raw * timeScale;
+    while (sim > 0) {
+      const step = Math.min(0.05, sim);
+      upd(step);
+      sim -= step;
+    }
+  }
   draw();
   if (t % 120 < 16) {
     ui();
@@ -968,6 +1001,8 @@ addEventListener('keydown', (e) => {
     mkBar();
   } else if (k === 'u' || k === 'U') {
     if (sel >= 0) upgrade(sel);
+  } else if (k === 'g' || k === 'G') {
+    showNote('Easter egg: the stars remember your patience ✨', 3);
   } else if (k === 'r' || k === 'R') {
     menu.style.display = 'grid';
     applySel();
@@ -997,10 +1032,6 @@ c.addEventListener('pointerdown', (e) => {
     return;
   }
   const i = pickTower(x, y);
-  if (e.altKey && i >= 0) {
-    swapW(i);
-    return;
-  }
   if (i >= 0) {
     sel = i;
     mkBar();
@@ -1011,8 +1042,23 @@ c.addEventListener('pointerdown', (e) => {
   place(x, y, selT[st], selW[sw]);
 });
 
+speed.innerHTML = ['1x', '5x', '50x', '500x'].map((label, i) => `<button data-i=${i} class=${i === 0 ? 'on' : ''}>${label}</button>`).join('');
+speed.onclick = (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const i = +b.dataset.i;
+  setSpeed(i);
+  showNote(`Speed ${timeScale}x`, 1.4);
+};
+
+setSpeed(0);
 applySel();
 resize();
 ui();
 mkBar();
+setInterval(() => {
+  sigStep = (sigStep + 1) % 60;
+  sgn.setAttribute('transform', `rotate(${sigStep * 6} 60 60)`);
+  sgn.setAttribute('stroke', sigStep % 2 ? '#9ef' : '#7ff');
+}, 1000);
 requestAnimationFrame(loop);

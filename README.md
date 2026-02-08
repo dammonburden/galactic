@@ -17,5 +17,5 @@ Then open `http://127.0.0.1:8000/index.html` in a modern Chromium-based browser.
 - `U` or **Upgrade** upgrades the selected tower.
 - Right-click a tower to sell.
 - `Q`/`E` cycles chassis, `1-3` selects weapon.
-- `Alt` + click cycles a tower's weapon.
 - Space toggles pause.
+- Use the speed buttons (1x/5x/50x/500x) to fast-forward waves.
