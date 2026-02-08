@@ -25,8 +25,6 @@ const crE = $('cr');
 const coreE = $('core');
 const scE = $('sc');
 const hint = $('hint');
-const nf = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
-const fmt = (v) => (v >= 1000 ? nf.format(v) : `${Math.floor(v)}`);
 const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td', 'Qad', 'Qid', 'Sxd', 'Spd', 'Ocd', 'Nod', 'Vg', 'Uv', 'Dv', 'Tv', 'Qav', 'Qiv', 'Sxv', 'Spv', 'Ocv', 'Nov', 'Tg'];
 const fmt = (v) => {
   if (!Number.isFinite(v)) return '∞';
