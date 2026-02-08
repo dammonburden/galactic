@@ -667,6 +667,7 @@ function showTip() {
     tip.style.opacity = 0;
     return;
   }
+  tip.classList.remove('panel');
   const x = mx;
   const y = my;
   if (hoverT >= 0) {
@@ -1078,27 +1079,38 @@ c.addEventListener('pointerdown', (e) => {
   place(x, y, selT[st], selW[sw]);
 });
 
-const showPanelTip = (e) => {
+let panelTipTarget = null;
+const showPanelTip = (b) => {
   if (menu.style.display !== 'none' || dead) return;
-  const b = e.target.closest('button[data-tip]');
-  if (!b) {
-    tip.style.opacity = 0;
-    return;
-  }
+  if (!b || b === panelTipTarget) return;
+  panelTipTarget = b;
+  const r = b.getBoundingClientRect();
   tip.innerHTML = b.dataset.tip;
-  tip.style.left = `${e.clientX + 12}px`;
-  tip.style.top = `${e.clientY + 12}px`;
+  tip.classList.add('panel');
+  tip.style.left = `${r.left + r.width / 2}px`;
+  tip.style.top = `${r.top - 8}px`;
   tip.style.opacity = 1;
 };
 
 const hidePanelTip = () => {
+  panelTipTarget = null;
+  tip.classList.remove('panel');
   tip.style.opacity = 0;
 };
 
-ts.addEventListener('pointermove', showPanelTip);
-ws.addEventListener('pointermove', showPanelTip);
-ts.addEventListener('pointerleave', hidePanelTip);
-ws.addEventListener('pointerleave', hidePanelTip);
+const handlePanelOver = (e) => {
+  const b = e.target.closest('button[data-tip]');
+  if (b) showPanelTip(b);
+};
+
+const handlePanelOut = (e) => {
+  if (!e.relatedTarget || !e.relatedTarget.closest('button[data-tip]')) hidePanelTip();
+};
+
+ts.addEventListener('pointerover', handlePanelOver);
+ws.addEventListener('pointerover', handlePanelOver);
+ts.addEventListener('pointerout', handlePanelOut);
+ws.addEventListener('pointerout', handlePanelOut);
 
 speed.innerHTML = ['1x', '5x', '50x', '500x'].map((label, i) => `<button data-i=${i} class=${i === 0 ? 'on' : ''}>${label}</button>`).join('');
 speed.onclick = (e) => {
