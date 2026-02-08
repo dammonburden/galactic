@@ -27,6 +27,21 @@ const scE = $('sc');
 const hint = $('hint');
 const nf = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 const fmt = (v) => (v >= 1000 ? nf.format(v) : `${Math.floor(v)}`);
+const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'Ud', 'Dd', 'Td', 'Qad', 'Qid', 'Sxd', 'Spd', 'Ocd', 'Nod', 'Vg', 'Uv', 'Dv', 'Tv', 'Qav', 'Qiv', 'Sxv', 'Spv', 'Ocv', 'Nov', 'Tg'];
+const fmt = (v) => {
+  if (!Number.isFinite(v)) return '∞';
+  const sign = v < 0 ? '-' : '';
+  const n0 = Math.abs(v);
+  if (n0 < 1000) return `${sign}${Math.floor(n0)}`;
+  const e = Math.floor(Math.log10(n0) / 3);
+  if (e < SUFFIXES.length) {
+    const scale = 10 ** (e * 3);
+    const n = n0 / scale;
+    const digits = n >= 100 ? 0 : n >= 10 ? 1 : 2;
+    return `${sign}${n.toFixed(digits)}${SUFFIXES[e]}`;
+  }
+  return `${sign}${n0.toExponential(2)}`;
+};
 
 addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -393,6 +408,7 @@ let spawnTick = 0;
 let bossPending = 0;
 let megaPending = 0;
 let timeScale = 1;
+let speedIdx = 0;
 let sigStep = 0;
 const use = new Uint16Array(10);
 const toInt = (v) => Math.max(0, Math.floor(v));
@@ -401,13 +417,13 @@ function mkBar() {
   let s = '';
   for (let i = 0; i < selT.length; i++) {
     const tower = T[selT[i]];
-    s += `<button data-i=${i} class=${i === st ? 'on' : ''} title="${tower.n} · ${tower.c}c">${tower.i}</button>`;
+    s += `<button data-i=${i} class=${i === st ? 'on' : ''} data-tip="${tower.i} ${tower.n}<br>Chassis cost ${tower.c}c">${tower.i}</button>`;
   }
   ts.innerHTML = s;
   s = '';
   for (let i = 0; i < selW.length; i++) {
     const weapon = W[selW[i]];
-    s += `<button data-i=${i} class=${i === sw ? 'on' : ''} title="${weapon.n} · ${weapon.c}c">${weapon.i}</button>`;
+    s += `<button data-i=${i} class=${i === sw ? 'on' : ''} data-tip="${weapon.i} ${weapon.n}<br>Weapon cost ${weapon.c}c">${weapon.i}</button>`;
   }
   ws.innerHTML = s;
   if (sel >= 0) {
@@ -426,6 +442,7 @@ function mkBar() {
     upB.disabled = true;
     upB.title = '';
   }
+  upB.disabled = !(sel >= 0 && tier[sel] < 100);
   hint.textContent = dead
     ? 'Run ended. Restart from menu with R.'
     : paused
@@ -606,7 +623,7 @@ function sell(i) {
 function upgrade(i) {
   if (i < 0 || i >= tn || dead || paused) return;
   const t = tier[i];
-  if (t >= 9) return;
+  if (t >= 100) return;
   const ch = T[tt[i]];
   const we = W[tw[i]];
   const base = ch.c + we.c * 0.72;
@@ -630,8 +647,8 @@ function spawnFriendly(x, y, amt) {
 
 function ui() {
   waveE.textContent = wave;
-  crE.textContent = nf.format(money);
-  coreE.textContent = core | 0;
+  crE.textContent = fmt(money);
+  coreE.textContent = Math.max(0, core | 0);
   scE.textContent = best;
 }
 
@@ -642,8 +659,9 @@ function showNote(text, time = 2.2) {
 }
 
 function setSpeed(idx) {
-  timeScale = [1, 5, 50, 500][idx] || 1;
-  [...speed.children].forEach((btn, i) => btn.classList.toggle('on', i === idx));
+  speedIdx = Math.max(0, Math.min(3, idx));
+  timeScale = [1, 5, 50, 500][speedIdx] || 1;
+  [...speed.children].forEach((btn, i) => btn.classList.toggle('on', i === speedIdx));
 }
 
 function showTip() {
@@ -667,7 +685,7 @@ function showTip() {
     const bossType = eboss[i];
     const name = bossType === 2 ? MEGA_BOSS.n : bossType ? BOSS.n : E[et[i]].n;
     const icon = bossType === 2 ? MEGA_BOSS.i : bossType ? BOSS.i : E[et[i]].i;
-    tip.innerHTML = `${icon} ${name}<br>HP ${nf.format(eh[i])} | Count ${nf.format(ec[i])}`;
+    tip.innerHTML = `${icon} ${name}<br>HP ${fmt(eh[i])} | Count ${fmt(ec[i])}`;
     tip.style.left = `${x + 14}px`;
     tip.style.top = `${y + 14}px`;
     tip.style.opacity = 1;
@@ -733,7 +751,7 @@ function upd(dt) {
     ep[i] += es[i] * dt;
     if (ep[i] >= 1) {
       const dmgC = Math.max(1, (ec[i] * ek[i]) / 2400) | 0;
-      core -= dmgC;
+      core = Math.max(0, core - dmgC);
       en--;
       if (i !== en) {
         ep[i] = ep[en];
@@ -1017,12 +1035,16 @@ addEventListener('keydown', (e) => {
     mkBar();
   } else if (k === 'u' || k === 'U') {
     if (sel >= 0) upgrade(sel);
-  } else if (k === 'g' || k === 'G') {
-    showNote('Easter egg: the stars remember your patience ✨', 3);
   } else if (k === 'r' || k === 'R') {
     menu.style.display = 'grid';
     applySel();
     tip.style.opacity = 0;
+  } else if (k === '[' || k === '{' || k === '-' || k === '_') {
+    setSpeed(speedIdx - 1);
+    showNote(`Speed ${timeScale}x`, 1.2);
+  } else if (k === ']' || k === '}' || k === '=' || k === '+') {
+    setSpeed(speedIdx + 1);
+    showNote(`Speed ${timeScale}x`, 1.2);
   }
 });
 
@@ -1057,6 +1079,28 @@ c.addEventListener('pointerdown', (e) => {
   mkBar();
   place(x, y, selT[st], selW[sw]);
 });
+
+const showPanelTip = (e) => {
+  if (menu.style.display !== 'none' || dead) return;
+  const b = e.target.closest('button[data-tip]');
+  if (!b) {
+    tip.style.opacity = 0;
+    return;
+  }
+  tip.innerHTML = b.dataset.tip;
+  tip.style.left = `${e.clientX + 12}px`;
+  tip.style.top = `${e.clientY + 12}px`;
+  tip.style.opacity = 1;
+};
+
+const hidePanelTip = () => {
+  tip.style.opacity = 0;
+};
+
+ts.addEventListener('pointermove', showPanelTip);
+ws.addEventListener('pointermove', showPanelTip);
+ts.addEventListener('pointerleave', hidePanelTip);
+ws.addEventListener('pointerleave', hidePanelTip);
 
 speed.innerHTML = ['1x', '5x', '50x', '500x'].map((label, i) => `<button data-i=${i} class=${i === 0 ? 'on' : ''}>${label}</button>`).join('');
 speed.onclick = (e) => {
