@@ -387,6 +387,7 @@ let pendingPacks = 0;
 let spawnTick = 0;
 let bossPending = 0;
 const use = new Uint16Array(10);
+const toInt = (v) => Math.max(0, Math.floor(v));
 
 function mkBar() {
   let s = '';
@@ -482,7 +483,7 @@ function spawnWave() {
 function dmgPack(i, dm) {
   const h = eh[i] - dm;
   if (h <= 0) {
-    money += ec[i] * eb[i];
+    money = toInt(money + ec[i] * eb[i]);
     eh[i] = 0;
     ec[i] = 0;
     en--;
@@ -503,7 +504,7 @@ function dmgPack(i, dm) {
   }
   const before = ec[i];
   const nc = Math.ceil(h / ehu[i]);
-  if (nc < before) money += (before - nc) * eb[i];
+  if (nc < before) money = toInt(money + (before - nc) * eb[i]);
   ec[i] = nc;
   eh[i] = h;
 }
@@ -517,7 +518,7 @@ function place(x, y, ti, wi) {
   const cost = (ch.c + we.c * 0.72) | 0;
   if (money < cost) return;
   for (let i = 0; i < tn; i++) if (dist2(x, y, tx[i], ty[i]) < 900) return;
-  money -= cost;
+  money = Math.max(0, money - cost);
   const i = tn++;
   tx[i] = x;
   ty[i] = y;
@@ -544,7 +545,7 @@ function sell(i) {
   const we = W[tw[i]];
   const base = ch.c + we.c * 0.72;
   const val = base * (0.85 + 0.35 * tier[i]) * 0.62;
-  money += val | 0;
+  money = toInt(money + val);
   tn--;
   if (i !== tn) {
     tx[i] = tx[tn];
@@ -573,7 +574,7 @@ function upgrade(i) {
   const base = ch.c + we.c * 0.72;
   const cost = (base * (0.58 + 0.62 * t) * (1 + 0.03 * wave)) | 0;
   if (money < cost) return;
-  money -= cost;
+  money = Math.max(0, money - cost);
   tier[i] = t + 1;
   heat[i] *= 0.82;
   mkBar();
@@ -831,8 +832,8 @@ function upd(dt) {
   }
   if (en === 0 && wait <= 0) {
     updBest();
-    bank = money | 0;
-    money = (bank * 1.2) | 0;
+    bank = toInt(money);
+    money = toInt(bank * 1.2);
     showNote(`Wave ${wave} cleared +20% bank`);
     wave++;
     wait = 1.6;
