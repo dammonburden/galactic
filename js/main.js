@@ -506,7 +506,7 @@ function spawnPack(isBoss) {
   const cnt = isBoss ? 1 : Math.max(1, (base * e.c * (0.75 + rng() * 0.55)) | 0);
   const hpU = (1.8 + wave * 0.16) * e.hp * (0.78 + rng() * 0.55);
   const sp = (0.03 + wave * 0.0001) * e.sp * (0.92 + rng() * 0.16);
-  const b = (0.14 + wave * 0.0012) * e.b;
+  const b = (2.5 + wave * 0.8) * e.b;
   const i = en++;
   ep[i] = 0;
   es[i] = sp;
@@ -897,9 +897,11 @@ function upd(dt) {
   }
   if (en === 0 && wait <= 0) {
     updBest();
+    const waveBonus = toInt(15 + wave * 8);
+    money = toInt(money + waveBonus);
     bank = toInt(money);
     money = toInt(bank * 1.2);
-    showNote(`Wave ${wave} cleared +20% bank`);
+    showNote(`Wave ${wave} cleared +${fmt(waveBonus)}c bonus +20% bank`);
     wave++;
     wait = 1.6;
   }

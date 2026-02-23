@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Galactic Tower Defense</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><style>
+<!doctype html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Galactic Tower Defense</title><link rel="icon" href="favicon.svg" type="image/svg+xml"><style>
 :root{color-scheme:dark;--bd:color-mix(in oklab,#8cf 26%,#000)}*{box-sizing:border-box;font:12px/1.2 system-ui,Inter,Segoe UI,Roboto,Helvetica,Arial}html,body{height:100%;margin:0;background:#05060a;color:#eaf6ff;overflow:hidden}
 #c{position:fixed;inset:0;width:100vw;height:100vh;touch-action:none;z-index:0}
 #hud{position:fixed;top:10px;left:10px;display:flex;gap:10px;align-items:flex-end;padding:10px 12px;border-radius:14px;border:1px solid var(--bd);background:color-mix(in oklab,#0b1020 84%,transparent);backdrop-filter:blur(10px) saturate(1.2);user-select:none;z-index:3}
@@ -30,6 +30,15 @@
 .row button:hover{transform:translateY(-1px);filter:saturate(1.1)}.row button:disabled{opacity:.35;cursor:not-allowed;transform:none;filter:none}
 .small{margin-top:10px;font-size:11px;opacity:.82;line-height:1.25}
 @media (max-width:900px){.cols{grid-template-columns:1fr}.grid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:600px){
+#panel{bottom:0;border-radius:16px 16px 0 0;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));gap:8px;row-gap:6px}
+.slot{gap:4px}.slot button{width:44px;height:44px;font-size:16px;border-radius:10px}
+#speed button{width:40px;height:36px;font-size:11px}
+#up{padding:8px 10px;font-size:11px}
+#hint{flex-basis:100%;font-size:10px;max-width:none}
+#hud{gap:6px;padding:8px 10px}.k{min-width:62px}.k b{font-size:15px}.k span{font-size:9px}
+#sig{width:52px;height:52px}
+}
 @media (hover:none){#hint{opacity:.84;visibility:visible}}
 </style></head><body>
 <canvas id=c></canvas>
