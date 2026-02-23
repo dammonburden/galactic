@@ -440,7 +440,6 @@ function mkBar() {
     upB.disabled = true;
     upB.title = '';
   }
-  upB.disabled = !(sel >= 0 && tier[sel] < 100);
   hint.textContent = dead
     ? 'Run ended. Restart from menu with R.'
     : paused
@@ -662,6 +661,17 @@ function setSpeed(idx) {
   [...speed.children].forEach((btn, i) => btn.classList.toggle('on', i === speedIdx));
 }
 
+function positionTip(x, y) {
+  const tr = tip.getBoundingClientRect();
+  let tx0 = x + 14;
+  let ty0 = y + 14;
+  if (tx0 + tr.width > w - 8) tx0 = x - tr.width - 8;
+  if (ty0 + tr.height > h - 8) ty0 = y - tr.height - 8;
+  tip.style.left = `${tx0}px`;
+  tip.style.top = `${ty0}px`;
+  tip.style.opacity = 1;
+}
+
 function showTip() {
   if (menu.style.display !== 'none' || dead) {
     tip.style.opacity = 0;
@@ -674,9 +684,7 @@ function showTip() {
     const i = hoverT;
     const extra = T[tt[i]].spawn ? ' Spawner' : '';
     tip.innerHTML = `${T[tt[i]].i} ${T[tt[i]].n}${extra}<br>${W[tw[i]].i} ${W[tw[i]].n}<br>Tier ${tier[i]} | Integrity ${thp[i] | 0}`;
-    tip.style.left = `${x + 14}px`;
-    tip.style.top = `${y + 14}px`;
-    tip.style.opacity = 1;
+    positionTip(x, y);
     return;
   }
   if (hoverE >= 0) {
@@ -685,9 +693,7 @@ function showTip() {
     const name = bossType === 2 ? MEGA_BOSS.n : bossType ? BOSS.n : E[et[i]].n;
     const icon = bossType === 2 ? MEGA_BOSS.i : bossType ? BOSS.i : E[et[i]].i;
     tip.innerHTML = `${icon} ${name}<br>HP ${fmt(eh[i])} | Count ${fmt(ec[i])}`;
-    tip.style.left = `${x + 14}px`;
-    tip.style.top = `${y + 14}px`;
-    tip.style.opacity = 1;
+    positionTip(x, y);
     return;
   }
   tip.style.opacity = 0;
@@ -923,11 +929,13 @@ function draw() {
     }
     const max = ec[i] * ehu[i];
     const p = max > 0 ? eh[i] / max : 0;
+    const barW = Math.max(24, size + 8);
+    const barY = ey[i] - size * 0.5 - 10;
     ctx.globalAlpha = 0.9;
     ctx.fillStyle = 'rgba(0,0,0,.4)';
-    ctx.fillRect(ex[i] - 22, ey[i] - 36, 44, 5);
+    ctx.fillRect(ex[i] - barW * 0.5, barY, barW, 5);
     ctx.fillStyle = eboss[i] ? 'rgba(255,190,100,.9)' : 'rgba(255,120,120,.9)';
-    ctx.fillRect(ex[i] - 22, ey[i] - 36, 44 * p, 5);
+    ctx.fillRect(ex[i] - barW * 0.5, barY, barW * p, 5);
     ctx.globalAlpha = 1;
   }
   for (let i = 0; i < fn; i++) {
@@ -973,14 +981,22 @@ function draw() {
       ctx.strokeStyle = 'rgba(190,255,255,.85)';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(x, y, 18, 0, 6.283);
+      ctx.arc(x, y, sz * 0.5 + 4, 0, 6.283);
       ctx.stroke();
     }
   }
   if (!dead && menu.style.display === 'none') {
-    ctx.globalAlpha = 0.14;
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = '#bff';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(mx, my, 14, 0, 6.283);
+    ctx.stroke();
+    ctx.globalAlpha = 0.06;
     ctx.fillStyle = '#bff';
-    ctx.fillRect(mx - 10, my - 10, 20, 20);
+    ctx.beginPath();
+    ctx.arc(mx, my, 14, 0, 6.283);
+    ctx.fill();
     ctx.globalAlpha = 1;
   }
 }
