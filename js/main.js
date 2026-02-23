@@ -432,10 +432,10 @@ function mkBar() {
     const cost = (base * (0.58 + 0.62 * t) * (1 + 0.03 * wave)) | 0;
     const nextTier = t + 1;
     let tipText = `Upgrade to Tier ${nextTier} — Cost ${fmt(cost)}c`;
-    if (t >= 9) tipText += ' (Max level)';
+    if (t >= 100) tipText += ' (Max level)';
     else if (money < cost) tipText += ` (Need ${fmt(cost - money)} more credits)`;
     upB.title = tipText;
-    upB.disabled = t >= 9 || money < cost;
+    upB.disabled = t >= 100 || money < cost;
   } else {
     upB.disabled = true;
     upB.title = '';
@@ -907,6 +907,7 @@ function upd(dt) {
   }
   if (core <= 0 && !dead) {
     dead = 1;
+    try { localStorage.removeItem(SAVE_KEY); } catch {}
     mkBar();
     tip.style.opacity = 0;
   }
@@ -1014,6 +1015,14 @@ function loop(t) {
       sim -= step;
     }
   }
+  if (upHold && sel >= 0) {
+    upAccum += raw * 1000;
+    if (upAccum >= upDelay) {
+      upgrade(sel);
+      upAccum = 0;
+      if (upDelay > 30) upDelay = Math.max(30, upDelay * 0.82);
+    }
+  }
   draw();
   if (t % 120 < 16) {
     ui();
@@ -1031,9 +1040,20 @@ start.onclick = () => {
   requestAnimationFrame(loop);
 };
 
-upB.onclick = () => {
+let upHold = 0;
+let upDelay = 0;
+let upAccum = 0;
+upB.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
   if (sel >= 0) upgrade(sel);
-};
+  upHold = 1;
+  upDelay = 400;
+  upAccum = 0;
+});
+const stopUpHold = () => { upHold = 0; };
+upB.addEventListener('pointerup', stopUpHold);
+upB.addEventListener('pointercancel', stopUpHold);
+upB.addEventListener('pointerleave', stopUpHold);
 
 addEventListener('keydown', (e) => {
   const k = e.key;
@@ -1053,6 +1073,7 @@ addEventListener('keydown', (e) => {
   } else if (k === 'u' || k === 'U') {
     if (sel >= 0) upgrade(sel);
   } else if (k === 'r' || k === 'R') {
+    try { localStorage.removeItem(SAVE_KEY); } catch {}
     menu.style.display = 'grid';
     applySel();
     tip.style.opacity = 0;
@@ -1139,14 +1160,88 @@ speed.onclick = (e) => {
   showNote(`Speed ${timeScale}x`, 1.4);
 };
 
+const SAVE_KEY = 'galactic_td_save';
+
+function saveGame() {
+  if (menu.style.display !== 'none' || dead) return;
+  const s = {
+    v: 1, wave, money, bank, core, best, sel, st, sw, paused,
+    speedIdx, timeScale, wait, pendingPacks, spawnTick, bossPending, megaPending,
+    selT, selW,
+    tn, tt: Array.from(tt.subarray(0, tn)), tw: Array.from(tw.subarray(0, tn)),
+    tx: Array.from(tx.subarray(0, tn)), ty: Array.from(ty.subarray(0, tn)),
+    tier: Array.from(tier.subarray(0, tn)), heat: Array.from(heat.subarray(0, tn)),
+    cd: Array.from(cd.subarray(0, tn)), thp: Array.from(thp.subarray(0, tn)),
+    en, ep: Array.from(ep.subarray(0, en)), et: Array.from(et.subarray(0, en)),
+    ec: Array.from(ec.subarray(0, en)), ehu: Array.from(ehu.subarray(0, en)),
+    eh: Array.from(eh.subarray(0, en)), es: Array.from(es.subarray(0, en)),
+    eb: Array.from(eb.subarray(0, en)), ek: Array.from(ek.subarray(0, en)),
+    eboss: Array.from(eboss.subarray(0, en)),
+    fn, fp: Array.from(fp.subarray(0, fn)), fs: Array.from(fs.subarray(0, fn)),
+    fd: Array.from(fd.subarray(0, fn)), fl: Array.from(fl.subarray(0, fn)),
+    fcd: Array.from(fcd.subarray(0, fn)),
+  };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch {}
+}
+
+function loadGame() {
+  let s;
+  try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return false; }
+  if (!s || s.v !== 1) return false;
+  selT = s.selT; selW = s.selW; st = s.st; sw = s.sw;
+  wave = s.wave; money = s.money; bank = s.bank; core = s.core; best = s.best;
+  sel = s.sel; paused = 1; wait = s.wait;
+  pendingPacks = s.pendingPacks; spawnTick = s.spawnTick;
+  bossPending = s.bossPending; megaPending = s.megaPending;
+  tn = s.tn;
+  for (let i = 0; i < tn; i++) {
+    tx[i] = s.tx[i]; ty[i] = s.ty[i]; tt[i] = s.tt[i]; tw[i] = s.tw[i];
+    tier[i] = s.tier[i]; heat[i] = s.heat[i]; cd[i] = s.cd[i]; thp[i] = s.thp[i];
+    bt[i] = 0;
+  }
+  en = s.en;
+  for (let i = 0; i < en; i++) {
+    ep[i] = s.ep[i]; et[i] = s.et[i]; ec[i] = s.ec[i]; ehu[i] = s.ehu[i];
+    eh[i] = s.eh[i]; es[i] = s.es[i]; eb[i] = s.eb[i]; ek[i] = s.ek[i];
+    eboss[i] = s.eboss[i];
+    const u = ep[i] * (ps - 1);
+    let j = u | 0; let f = u - j;
+    if (j >= ps - 1) { j = ps - 2; f = 1; }
+    ex[i] = px[j] + (px[j + 1] - px[j]) * f;
+    ey[i] = py[j] + (py[j + 1] - py[j]) * f;
+  }
+  fn = s.fn;
+  for (let i = 0; i < fn; i++) {
+    fp[i] = s.fp[i]; fs[i] = s.fs[i]; fd[i] = s.fd[i]; fl[i] = s.fl[i]; fcd[i] = s.fcd[i];
+  }
+  setSpeed(s.speedIdx);
+  dead = 0;
+  localStorage.removeItem(SAVE_KEY);
+  return true;
+}
+
+addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
+addEventListener('pagehide', saveGame);
+
 setSpeed(0);
 applySel();
 resize();
 ui();
 mkBar();
+
 setInterval(() => {
   sigStep = (sigStep + 1) % 60;
   sgn.setAttribute('transform', `rotate(${sigStep * 6} 60 60)`);
   sgn.setAttribute('stroke', sigStep % 2 ? '#9ef' : '#7ff');
 }, 1000);
+
+if (loadGame()) {
+  menu.style.display = 'none';
+  resize();
+  applySel();
+  mkBar();
+  ui();
+  showNote('Game restored — paused', 2.5);
+}
+lt = performance.now();
 requestAnimationFrame(loop);
