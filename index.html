@@ -4,8 +4,7 @@
 #hud{position:fixed;top:10px;left:10px;display:flex;gap:10px;align-items:flex-end;padding:10px 12px;border-radius:14px;border:1px solid var(--bd);background:color-mix(in oklab,#0b1020 84%,transparent);backdrop-filter:blur(10px) saturate(1.2);user-select:none;z-index:3}
 .k{display:flex;flex-direction:column;gap:2px;min-width:86px}.k b{font-size:18px;letter-spacing:.2px}.k span{font-size:10px;opacity:.7;letter-spacing:1.1px}
 #panel{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:10px;row-gap:6px;flex-wrap:wrap;justify-content:center;align-items:center;padding:8px 12px;border-radius:16px;border:1px solid var(--bd);background:color-mix(in oklab,#0b1020 84%,transparent);backdrop-filter:blur(10px) saturate(1.2);user-select:none;z-index:3;max-width:min(1200px,calc(100vw - 20px))}
-#sig{position:fixed;right:12px;top:12px;width:78px;height:78px;opacity:.75;filter:drop-shadow(0 6px 18px #0008);z-index:2}
-#note{position:fixed;left:50%;top:10px;transform:translateX(-50%);padding:8px 12px;border-radius:999px;border:1px solid color-mix(in oklab,#8cf 24%,#000);background:color-mix(in oklab,#0b1020 82%,transparent);backdrop-filter:blur(10px) saturate(1.2);font-size:11px;letter-spacing:.3px;opacity:0;transition:.2s opacity, .2s transform;pointer-events:none}
+#note{position:fixed;left:50%;top:60px;transform:translateX(-50%);padding:8px 12px;border-radius:999px;border:1px solid color-mix(in oklab,#8cf 24%,#000);background:color-mix(in oklab,#0b1020 82%,transparent);backdrop-filter:blur(10px) saturate(1.2);font-size:11px;letter-spacing:.3px;opacity:0;transition:.2s opacity, .2s transform;pointer-events:none;z-index:3}
 #note.show{opacity:1;transform:translate(-50%,0)}
 .slot{display:flex;gap:6px;align-items:center}
 .slot button{width:38px;height:38px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s transform,.12s border-color,.12s background}
@@ -17,19 +16,24 @@
 #tip{position:fixed;z-index:9;pointer-events:none;opacity:0;transform:translate3d(0,0,0);padding:8px 10px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#071022 88%,#000);backdrop-filter:blur(10px) saturate(1.2);font-size:11px;line-height:1.22;white-space:nowrap}
 #tip.panel{transform:translate(-50%,-110%)}
 #menu{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in oklab,#000 72%,transparent);backdrop-filter:blur(12px) saturate(1.25);z-index:4}
-.card{width:min(1060px,94vw);max-height:92vh;overflow:auto;padding:18px 18px 14px;border-radius:18px;border:1px solid var(--bd);background:color-mix(in oklab,#071022 92%,#000);box-shadow:0 30px 120px #0008}
+.card{width:min(1060px,94vw);max-height:92vh;overflow:auto;padding:18px 18px 14px;border-radius:18px;border:1px solid var(--bd);background:color-mix(in oklab,#071022 92%,#000);box-shadow:0 30px 120px #0008;overflow-x:hidden}
 .card h1{margin:0 0 6px;font-size:20px}.card p{margin:0 0 12px;font-size:12px;opacity:.85}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .col h2{margin:8px 0 6px;font-size:12px;letter-spacing:1.1px;text-transform:uppercase;display:flex;justify-content:space-between;opacity:.9}
 .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.grid button{display:flex;flex-direction:column;gap:4px;padding:8px 8px 6px;border-radius:14px;border:1px solid color-mix(in oklab,#8cf 20%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;user-select:none;transition:.12s transform,.12s border-color,.12s background}
+.grid button{display:flex;flex-direction:column;gap:4px;padding:8px 8px 6px;border-radius:14px;border:1px solid color-mix(in oklab,#8cf 20%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;user-select:none;transition:.12s transform,.12s border-color,.12s background;overflow:hidden;min-width:0}
 .grid button:hover{transform:translateY(-1px)}.grid button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
-.grid button span{font-size:18px}.grid button b{font-size:11px;font-weight:850;line-height:1.1}.grid button i{font-style:normal;font-size:10px;opacity:.75}
+.grid button span{font-size:18px}.grid button b{font-size:11px;font-weight:850;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}.grid button i{font-style:normal;font-size:10px;opacity:.75}
 .row{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
 .row button{padding:10px 14px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;letter-spacing:.3px;transition:.12s transform,.12s filter}
 .row button:hover{transform:translateY(-1px);filter:saturate(1.1)}.row button:disabled{opacity:.35;cursor:not-allowed;transform:none;filter:none}
 .small{margin-top:10px;font-size:11px;opacity:.82;line-height:1.25}
+.diff-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.diff-row button{padding:7px 12px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 20%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.3px;transition:.12s transform,.12s border-color,.12s background}
+.diff-row button:hover{transform:translateY(-1px)}.diff-row button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
+.diff-row button small{display:block;font-weight:400;opacity:.7;font-size:9px;margin-top:2px}
 @media (max-width:900px){.cols{grid-template-columns:1fr}.grid{grid-template-columns:repeat(4,1fr)}}
+@media (max-width:480px){.grid{grid-template-columns:repeat(3,1fr)}.grid button b{font-size:10px}.grid button i{font-size:9px}.grid button{padding:6px 4px 4px}}
 @media (max-width:600px){
 #panel{bottom:0;border-radius:16px 16px 0 0;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));gap:8px;row-gap:6px}
 .slot{gap:4px}.slot button{width:44px;height:44px;font-size:16px;border-radius:10px}
@@ -37,7 +41,6 @@
 #up{padding:8px 10px;font-size:11px}
 #hint{flex-basis:100%;font-size:10px;max-width:none}
 #hud{gap:6px;padding:8px 10px}.k{min-width:62px}.k b{font-size:15px}.k span{font-size:9px}
-#sig{width:52px;height:52px}
 }
 @media (hover:none){#hint{opacity:.84;visibility:visible}}
 </style></head><body>
@@ -50,15 +53,6 @@
   <div class=k><b id=sc>1</b><span>BEST WAVE</span></div>
 </div>
 <div id=note></div>
-<svg id=sig viewBox="0 0 120 120" aria-hidden=true>
-  <defs><radialGradient id=sg cx=".5" cy=".5" r=".6"><stop offset="0" stop-color="#7ff"/><stop offset=".7" stop-color="#36b"/><stop offset="1" stop-color="#0000"/></radialGradient></defs>
-  <circle cx="60" cy="60" r="44" fill="url(#sg)" opacity=".65"/>
-  <g id=sgn fill="none" stroke="#9ef" stroke-width="2" stroke-linecap="round" opacity=".8">
-    <circle cx="60" cy="60" r="32"/>
-    <path d="M20 60h80M60 20v80"/>
-    <circle cx="60" cy="60" r="10" fill="#cfe"/>
-  </g>
-</svg>
 
 <div id=panel>
   <div class=slot id=ts></div>
@@ -72,7 +66,10 @@
 
 <div id=menu><div class=card>
   <h1>Galactic Tower Defense</h1>
-  <p>Pick 4 chassis and 3 weapons. Build only from your loadout. Enemies are slower with lower HP, and bosses arrive every few waves. New waves begin only after the last enemy is cleared. End of each wave: bank earns 20% interest. Anti-monoculture: stacking the same weapon type reduces efficiency.</p>
+  <p>Pick 4 chassis and 3 weapons. Build only from your loadout. Bosses arrive every few waves. New waves begin only after the last enemy is cleared. End of each wave: bank earns 20% interest. Anti-monoculture: stacking the same weapon type reduces efficiency.</p>
+  <div class=diff-row id=diffRow></div>
+  <h2 style="margin:8px 0 6px;font-size:12px;letter-spacing:1.1px;text-transform:uppercase;opacity:.9">Map</h2>
+  <div class=diff-row id=mapRow></div>
   <div class=cols>
     <div class=col><h2>Chassis <i id=tc>0/4</i></h2><div class=grid id=tl></div></div>
     <div class=col><h2>Weapons <i id=wc>0/3</i></h2><div class=grid id=wl></div></div>

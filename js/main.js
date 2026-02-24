@@ -1,4 +1,4 @@
-import { TOWERS, WEAPONS, ENEMIES, BOSS, MEGA_BOSS } from './data.js';
+import { TOWERS, WEAPONS, ENEMIES, BOSS, MEGA_BOSS, DIFFICULTIES } from './data.js';
 import { clamp, dist2, rng, hsl } from './utils.js';
 
 const $ = (id) => document.getElementById(id);
@@ -12,14 +12,14 @@ const wc = $('wc');
 const start = $('start');
 const rand = $('rand');
 const preset = $('preset');
+const diffRow = $('diffRow');
+const mapRow = $('mapRow');
 const ts = $('ts');
 const ws = $('ws');
 const speed = $('speed');
 const upB = $('up');
 const tip = $('tip');
 const note = $('note');
-const sig = $('sig');
-const sgn = $('sgn');
 const waveE = $('wave');
 const crE = $('cr');
 const coreE = $('core');
@@ -48,6 +48,16 @@ let selW = [0, 1, 2];
 let st = 0;
 let sw = 0;
 let paused = 0;
+let diff = 2;
+let maxWaves = 40;
+let mapIdx = 0;
+
+const MAPS = [
+  { n: 'Spiral', desc: 'Classic inward spiral' },
+  { n: 'Zigzag', desc: 'Sharp switchbacks' },
+  { n: 'Figure-8', desc: 'Crossing loops' },
+  { n: 'Star', desc: 'Star-shaped orbit' },
+];
 
 const T = TOWERS;
 const W = WEAPONS;
@@ -64,6 +74,40 @@ function mkBtns(el, arr, k) {
 
 mkBtns(tl, T, 't');
 mkBtns(wl, W, 'w');
+
+function mkDiffBtns() {
+  let s = '';
+  for (let i = 0; i < DIFFICULTIES.length; i++) {
+    const d = DIFFICULTIES[i];
+    s += `<button data-d=${i} class=${i === diff ? 'sel' : ''}>${d.n}<small>${d.waves} waves — ${d.desc}</small></button>`;
+  }
+  diffRow.innerHTML = s;
+}
+mkDiffBtns();
+
+diffRow.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-d]');
+  if (!b) return;
+  diff = +b.dataset.d;
+  mkDiffBtns();
+});
+
+function mkMapBtns() {
+  let s = '';
+  for (let i = 0; i < MAPS.length; i++) {
+    const m = MAPS[i];
+    s += `<button data-m=${i} class=${i === mapIdx ? 'sel' : ''}>${m.n}<small>${m.desc}</small></button>`;
+  }
+  mapRow.innerHTML = s;
+}
+mkMapBtns();
+
+mapRow.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-m]');
+  if (!b) return;
+  mapIdx = +b.dataset.m;
+  mkMapBtns();
+});
 
 function applySel() {
   for (let i = 0; i < tl.children.length; i++) {
@@ -106,7 +150,7 @@ preset.onclick = () => {
 };
 
 rand.onclick = () => {
-  let a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  let a = Array.from({length: T.length}, (_, i) => i);
   for (let i = a.length - 1; i > 0; i--) {
     const j = (Math.random() * (i + 1)) | 0;
     const t = a[i];
@@ -114,7 +158,7 @@ rand.onclick = () => {
     a[j] = t;
   }
   selT = a.slice(0, 4);
-  a = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+  a = Array.from({length: W.length}, (_, i) => i);
   for (let i = a.length - 1; i > 0; i--) {
     const j = (Math.random() * (i + 1)) | 0;
     const t = a[i];
@@ -274,14 +318,48 @@ function mkBoss(boss) {
 
 function mkPath() {
   const mr = Math.min(w, h) * 0.46;
-  const ir = mr * 0.12;
-  const tz = 12 * Math.PI;
-  for (let i = 0; i < ps; i++) {
-    const t = i / (ps - 1);
-    const a = t * tz;
-    const r = mr * (1 - t) + ir * t;
-    px[i] = cx + Math.cos(a) * r;
-    py[i] = cy + Math.sin(a) * r;
+  if (mapIdx === 0) {
+    const ir = mr * 0.12;
+    const tz = 12 * Math.PI;
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const a = t * tz;
+      const r = mr * (1 - t) + ir * t;
+      px[i] = cx + Math.cos(a) * r;
+      py[i] = cy + Math.sin(a) * r;
+    }
+  } else if (mapIdx === 1) {
+    const legs = 14;
+    const margin = mr * 0.9;
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const leg = (t * legs) | 0;
+      const lt = (t * legs) - leg;
+      const yOfs = (leg + (leg % 2 === 0 ? lt : 1 - lt)) / legs;
+      const xDir = leg % 2 === 0 ? 1 : -1;
+      const xOfs = xDir * (lt - 0.5) * 2;
+      px[i] = cx + xOfs * margin;
+      py[i] = cy - margin + yOfs * margin * 2;
+    }
+  } else if (mapIdx === 2) {
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const a = t * Math.PI * 4;
+      const r = mr * 0.42 * Math.sin(a * 0.5);
+      px[i] = cx + Math.cos(a) * mr * 0.65;
+      py[i] = cy + Math.sin(a) * r;
+    }
+  } else if (mapIdx === 3) {
+    const points = 5;
+    const loops = 3;
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const a = t * Math.PI * 2 * loops;
+      const starR = mr * (0.3 + 0.6 * Math.abs(Math.sin(a * points * 0.5)));
+      const decay = 1 - t * 0.6;
+      px[i] = cx + Math.cos(a) * starR * decay;
+      py[i] = cy + Math.sin(a) * starR * decay;
+    }
   }
 }
 
@@ -386,6 +464,9 @@ const fs = new Float32Array(MF);
 const fd = new Float32Array(MF);
 const fl = new Float32Array(MF);
 const fcd = new Float32Array(MF);
+const ft = new Uint8Array(MF);
+const fxp = new Float32Array(MF);
+const fyp = new Float32Array(MF);
 
 let wave = 1;
 let wait = 1.4;
@@ -407,7 +488,6 @@ let bossPending = 0;
 let megaPending = 0;
 let timeScale = 1;
 let speedIdx = 0;
-let sigStep = 0;
 const use = new Uint16Array(10);
 const toInt = (v) => Math.max(0, Math.floor(v));
 
@@ -440,8 +520,10 @@ function mkBar() {
     upB.disabled = true;
     upB.title = '';
   }
-  hint.textContent = dead
-    ? 'Run ended. Restart from menu with R.'
+  hint.textContent = dead === 2
+    ? 'Victory! Restart from menu with R.'
+    : dead
+    ? 'Defeated. Restart from menu with R.'
     : paused
       ? 'Paused. Space to resume.'
       : sel >= 0
@@ -468,12 +550,14 @@ function updBest() {
 }
 
 function resetRun() {
+  const d = DIFFICULTIES[diff];
+  maxWaves = d.waves;
   tn = 0;
   en = 0;
   fn = 0;
   wave = 1;
   wait = 1.4;
-  money = 220;
+  money = d.money;
   bank = 0;
   core = 50;
   dead = 0;
@@ -487,7 +571,6 @@ function resetRun() {
   bossPending = 0;
   megaPending = 0;
   timeScale = 1;
-  sigStep = 0;
   note.classList.remove('show');
   note.textContent = '';
   setSpeed(0);
@@ -504,8 +587,9 @@ function spawnPack(isBoss) {
   const e = isBoss === 2 ? MEGA_BOSS : isBoss ? BOSS : E[k];
   const base = waveBudget();
   const cnt = isBoss ? 1 : Math.max(1, (base * e.c * (0.75 + rng() * 0.55)) | 0);
-  const hpU = (1.8 + wave * 0.16) * e.hp * (0.78 + rng() * 0.55);
-  const sp = (0.03 + wave * 0.0001) * e.sp * (0.92 + rng() * 0.16);
+  const dif = DIFFICULTIES[diff];
+  const hpU = (1.8 + wave * 0.16) * e.hp * (0.78 + rng() * 0.55) * dif.hpMul;
+  const sp = (0.03 + wave * 0.0001) * e.sp * (0.92 + rng() * 0.16) * dif.spdMul;
   const b = (2.5 + wave * 0.8) * e.b;
   const i = en++;
   ep[i] = 0;
@@ -632,18 +716,27 @@ function upgrade(i) {
   mkBar();
 }
 
-function spawnFriendly(x, y, amt) {
+function spawnFriendly(x, y, amt, type) {
   if (fn >= MF - 2) return;
   const i = fn++;
+  ft[i] = type || 1;
   fp[i] = 0;
   fs[i] = 0.11 + amt * 0.002;
   fd[i] = 8 + amt * 1.2;
   fl[i] = 180 + amt * 12;
   fcd[i] = 0;
+  if (type === 3) {
+    fxp[i] = cx + (rng() - 0.5) * w * 0.7;
+    fyp[i] = cy + (rng() - 0.5) * h * 0.7;
+    fp[i] = 0.5;
+  } else {
+    fxp[i] = 0;
+    fyp[i] = 0;
+  }
 }
 
 function ui() {
-  waveE.textContent = wave;
+  waveE.textContent = `${wave}/${maxWaves}`;
   crE.textContent = fmt(money);
   coreE.textContent = Math.max(0, core | 0);
   scE.textContent = best;
@@ -682,7 +775,8 @@ function showTip() {
   const y = my;
   if (hoverT >= 0) {
     const i = hoverT;
-    const extra = T[tt[i]].spawn ? ' Spawner' : '';
+    const sType = T[tt[i]].spawn;
+    const extra = sType === 3 ? ' Airdrop' : sType === 2 ? ' Brawler' : sType ? ' Spawner' : '';
     tip.innerHTML = `${T[tt[i]].i} ${T[tt[i]].n}${extra}<br>${W[tw[i]].i} ${W[tw[i]].n}<br>Tier ${tier[i]} | Integrity ${thp[i] | 0}`;
     positionTip(x, y);
     return;
@@ -755,7 +849,7 @@ function upd(dt) {
   for (let i = 0; i < en; ) {
     ep[i] += es[i] * dt;
     if (ep[i] >= 1) {
-      const dmgC = Math.max(1, (ec[i] * ek[i]) / 2400) | 0;
+      const dmgC = Math.max(1, (ec[i] * ek[i] * DIFFICULTIES[diff].coreDmgMul) / 2400) | 0;
       core = Math.max(0, core - dmgC);
       en--;
       if (i !== en) {
@@ -795,7 +889,7 @@ function upd(dt) {
     const y = ty[i];
     if (ch.spawn && cd[i] <= 0) {
       const amt = 2 + t * 1.2;
-      spawnFriendly(x, y, amt);
+      spawnFriendly(x, y, amt, ch.spawn);
       cd[i] = 2.2 / (1 + 0.06 * (t - 1));
     }
     if (cd[i] > 0) continue;
@@ -853,61 +947,84 @@ function upd(dt) {
     }
   }
   for (let i = 0; i < fn; ) {
-    fp[i] += fs[i] * dt;
-    fl[i] -= dt * 60;
-    fcd[i] -= dt;
-    if (fp[i] >= 1 || fl[i] <= 0) {
-      fn--;
-      if (i !== fn) {
-        fp[i] = fp[fn];
-        fs[i] = fs[fn];
-        fd[i] = fd[fn];
-        fl[i] = fl[fn];
-        fcd[i] = fcd[fn];
+    const ftype = ft[i];
+    if (ftype === 3) {
+      fl[i] -= dt * 60;
+      fcd[i] -= dt;
+      if (fl[i] <= 0) {
+        fn--;
+        if (i !== fn) { fp[i]=fp[fn];fs[i]=fs[fn];fd[i]=fd[fn];fl[i]=fl[fn];fcd[i]=fcd[fn];ft[i]=ft[fn];fxp[i]=fxp[fn];fyp[i]=fyp[fn]; }
+        continue;
       }
-      continue;
-    }
-    const u = fp[i] * (ps - 1);
-    let j = u | 0;
-    let f = u - j;
-    if (j >= ps - 1) {
-      j = ps - 2;
-      f = 1;
-    }
-    const x = px[j] + (px[j + 1] - px[j]) * f;
-    const y = py[j] + (py[j + 1] - py[j]) * f;
-    if (fcd[i] <= 0) {
-      let hit = -1;
-      let bd = 1e9;
-      for (let j = 0; j < en; j++) {
-        if (ec[j] <= 0) continue;
-        const d = dist2(x, y, ex[j], ey[j]);
-        if (d < 1200 && d < bd) {
-          bd = d;
-          hit = j;
+      const x = fxp[i];
+      const y = fyp[i];
+      if (fcd[i] <= 0) {
+        let hit = -1; let bd = 1e9;
+        for (let j = 0; j < en; j++) {
+          if (ec[j] <= 0) continue;
+          const d = dist2(x, y, ex[j], ey[j]);
+          if (d < 2500 && d < bd) { bd = d; hit = j; }
+        }
+        if (hit >= 0) { dmgPack(hit, fd[i]); fcd[i] = 0.5; }
+      }
+      fd[i] += dt * 0.3;
+      i++;
+    } else {
+      fp[i] += fs[i] * dt;
+      fl[i] -= dt * 60;
+      fcd[i] -= dt;
+      if (fp[i] >= 1 || fl[i] <= 0) {
+        fn--;
+        if (i !== fn) { fp[i]=fp[fn];fs[i]=fs[fn];fd[i]=fd[fn];fl[i]=fl[fn];fcd[i]=fcd[fn];ft[i]=ft[fn];fxp[i]=fxp[fn];fyp[i]=fyp[fn]; }
+        continue;
+      }
+      const u = fp[i] * (ps - 1);
+      let j = u | 0;
+      let f = u - j;
+      if (j >= ps - 1) { j = ps - 2; f = 1; }
+      const x = px[j] + (px[j + 1] - px[j]) * f;
+      const y = py[j] + (py[j + 1] - py[j]) * f;
+      if (fcd[i] <= 0) {
+        let hit = -1; let bd = 1e9;
+        for (let j = 0; j < en; j++) {
+          if (ec[j] <= 0) continue;
+          const d = dist2(x, y, ex[j], ey[j]);
+          if (d < 1200 && d < bd) { bd = d; hit = j; }
+        }
+        if (hit >= 0) {
+          dmgPack(hit, fd[i]);
+          fcd[i] = 0.4;
+          if (ftype === 2) {
+            ep[hit] = Math.max(0, ep[hit] - 0.012 * (1 + fd[i] * 0.01));
+          }
         }
       }
-      if (hit >= 0) {
-        dmgPack(hit, fd[i]);
-        fcd[i] = 0.4;
-      }
+      fd[i] += dt * 0.4;
+      i++;
     }
-    fd[i] += dt * 0.4;
-    i++;
   }
-  if (en === 0 && wait <= 0) {
+  if (en === 0 && wait <= 0 && !dead) {
     updBest();
-    const waveBonus = toInt(15 + wave * 8);
-    money = toInt(money + waveBonus);
-    bank = toInt(money);
-    money = toInt(bank * 1.2);
-    showNote(`Wave ${wave} cleared +${fmt(waveBonus)}c bonus +20% bank`);
-    wave++;
-    wait = 1.6;
+    if (wave >= maxWaves) {
+      dead = 2;
+      try { localStorage.removeItem(SAVE_KEY); } catch {}
+      showNote(`VICTORY! ${DIFFICULTIES[diff].n} mode cleared at wave ${wave}!`, 999);
+      mkBar();
+      tip.style.opacity = 0;
+    } else {
+      const waveBonus = toInt(15 + wave * 8);
+      money = toInt(money + waveBonus);
+      bank = toInt(money);
+      money = toInt(bank * 1.2);
+      showNote(`Wave ${wave}/${maxWaves} cleared +${fmt(waveBonus)}c bonus +20% bank`);
+      wave++;
+      wait = 1.6;
+    }
   }
-  if (core <= 0 && !dead) {
+  if (core <= 0 && dead === 0) {
     dead = 1;
     try { localStorage.removeItem(SAVE_KEY); } catch {}
+    showNote(`Defeated at wave ${wave}/${maxWaves}`, 999);
     mkBar();
     tip.style.opacity = 0;
   }
@@ -942,20 +1059,29 @@ function draw() {
     ctx.globalAlpha = 1;
   }
   for (let i = 0; i < fn; i++) {
-    const u = fp[i] * (ps - 1);
-    let j = u | 0;
-    let f = u - j;
-    if (j >= ps - 1) {
-      j = ps - 2;
-      f = 1;
+    let x, y;
+    const ftype = ft[i];
+    if (ftype === 3) {
+      x = fxp[i]; y = fyp[i];
+    } else {
+      const u = fp[i] * (ps - 1);
+      let j = u | 0; let f = u - j;
+      if (j >= ps - 1) { j = ps - 2; f = 1; }
+      x = px[j] + (px[j + 1] - px[j]) * f;
+      y = py[j] + (py[j + 1] - py[j]) * f;
     }
-    const x = px[j] + (px[j + 1] - px[j]) * f;
-    const y = py[j] + (py[j + 1] - py[j]) * f;
     ctx.globalAlpha = 0.95;
-    ctx.fillStyle = 'rgba(160,240,255,.9)';
+    ctx.fillStyle = ftype === 2 ? 'rgba(255,180,120,.9)' : ftype === 3 ? 'rgba(180,255,160,.9)' : 'rgba(160,240,255,.9)';
     ctx.beginPath();
-    ctx.arc(x, y, 3.2, 0, 6.283);
+    ctx.arc(x, y, ftype === 3 ? 4.5 : ftype === 2 ? 4 : 3.2, 0, 6.283);
     ctx.fill();
+    if (ftype === 3) {
+      ctx.strokeStyle = 'rgba(180,255,160,.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, 12, 0, 6.283);
+      ctx.stroke();
+    }
     ctx.globalAlpha = 1;
   }
   for (let i = 0; i < tn; i++) {
@@ -1165,8 +1291,9 @@ const SAVE_KEY = 'galactic_td_save';
 function saveGame() {
   if (menu.style.display !== 'none' || dead) return;
   const s = {
-    v: 1, wave, money, bank, core, best, sel, st, sw, paused,
+    v: 2, wave, money, bank, core, best, sel, st, sw, paused,
     speedIdx, timeScale, wait, pendingPacks, spawnTick, bossPending, megaPending,
+    diff, maxWaves, mapIdx,
     selT, selW,
     tn, tt: Array.from(tt.subarray(0, tn)), tw: Array.from(tw.subarray(0, tn)),
     tx: Array.from(tx.subarray(0, tn)), ty: Array.from(ty.subarray(0, tn)),
@@ -1179,7 +1306,8 @@ function saveGame() {
     eboss: Array.from(eboss.subarray(0, en)),
     fn, fp: Array.from(fp.subarray(0, fn)), fs: Array.from(fs.subarray(0, fn)),
     fd: Array.from(fd.subarray(0, fn)), fl: Array.from(fl.subarray(0, fn)),
-    fcd: Array.from(fcd.subarray(0, fn)),
+    fcd: Array.from(fcd.subarray(0, fn)), ft: Array.from(ft.subarray(0, fn)),
+    fxp: Array.from(fxp.subarray(0, fn)), fyp: Array.from(fyp.subarray(0, fn)),
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch {}
 }
@@ -1187,7 +1315,8 @@ function saveGame() {
 function loadGame() {
   let s;
   try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return false; }
-  if (!s || s.v !== 1) return false;
+  if (!s || (s.v !== 1 && s.v !== 2)) return false;
+  diff = s.diff ?? 2; maxWaves = s.maxWaves ?? 40; mapIdx = s.mapIdx ?? 0;
   selT = s.selT; selW = s.selW; st = s.st; sw = s.sw;
   wave = s.wave; money = s.money; bank = s.bank; core = s.core; best = s.best;
   sel = s.sel; paused = 1; wait = s.wait;
@@ -1213,6 +1342,7 @@ function loadGame() {
   fn = s.fn;
   for (let i = 0; i < fn; i++) {
     fp[i] = s.fp[i]; fs[i] = s.fs[i]; fd[i] = s.fd[i]; fl[i] = s.fl[i]; fcd[i] = s.fcd[i];
+    ft[i] = s.ft ? s.ft[i] : 1; fxp[i] = s.fxp ? s.fxp[i] : 0; fyp[i] = s.fyp ? s.fyp[i] : 0;
   }
   setSpeed(s.speedIdx);
   dead = 0;
@@ -1229,11 +1359,6 @@ resize();
 ui();
 mkBar();
 
-setInterval(() => {
-  sigStep = (sigStep + 1) % 60;
-  sgn.setAttribute('transform', `rotate(${sigStep * 6} 60 60)`);
-  sgn.setAttribute('stroke', sigStep % 2 ? '#9ef' : '#7ff');
-}, 1000);
 
 if (loadGame()) {
   menu.style.display = 'none';
