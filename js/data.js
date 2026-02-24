@@ -9,6 +9,8 @@ export const TOWERS = [
   { n: 'Forge Turret', i: '🏭', c: 130, r: 160, rm: 1.0, fr: 1.12 },
   { n: 'Genesis Foundry', i: '🧬', c: 140, r: 140, rm: 1.0, fr: 0.85, spawn: 1 },
   { n: 'Rift Obelisk', i: '🌀', c: 150, r: 176, rm: 1.06, fr: 1.04 },
+  { n: 'Brawler Forge', i: '👊', c: 155, r: 130, rm: 1.0, fr: 0.8, spawn: 2 },
+  { n: 'Airdrop Bay', i: '🪂', c: 160, r: 120, rm: 1.0, fr: 0.75, spawn: 3 },
 ];
 
 export const WEAPONS = [
@@ -38,8 +40,8 @@ export const ENEMIES = [
 export const BOSS = {
   n: 'Worldbreaker',
   i: '👑',
-  hp: 5.2,
-  sp: 0.58,
+  hp: 38,
+  sp: 0.52,
   c: 0.08,
   b: 3.4,
   core: 3.8,
@@ -48,9 +50,17 @@ export const BOSS = {
 export const MEGA_BOSS = {
   n: 'Abyss Titan',
   i: '🛑',
-  hp: 9.2,
-  sp: 0.32,
+  hp: 120,
+  sp: 0.28,
   c: 0.05,
   b: 9.5,
   core: 12000,
 };
+
+export const DIFFICULTIES = [
+  { n: 'Easy', waves: 40, hpMul: 0.6, spdMul: 0.8, money: 320, coreDmgMul: 0.6, desc: 'Relaxed — anyone can beat it' },
+  { n: 'Intermediate', waves: 40, hpMul: 0.85, spdMul: 0.92, money: 260, coreDmgMul: 0.85, desc: 'A fair challenge' },
+  { n: 'Hard', waves: 40, hpMul: 1.0, spdMul: 1.0, money: 220, coreDmgMul: 1.0, desc: 'Requires experience' },
+  { n: 'Expert', waves: 40, hpMul: 1.4, spdMul: 1.15, money: 180, coreDmgMul: 1.3, desc: 'Only pros survive' },
+  { n: 'Impossible', waves: 50, hpMul: 2.0, spdMul: 1.35, money: 140, coreDmgMul: 1.8, desc: 'Near-certain death' },
+];
