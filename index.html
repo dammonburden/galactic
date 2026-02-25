@@ -9,7 +9,14 @@
 .slot{display:flex;gap:6px;align-items:center}
 .slot button{width:38px;height:38px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s transform,.12s border-color,.12s background}
 .slot button:hover{transform:translateY(-1px)}.slot button.on{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
-#up{padding:10px 12px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;letter-spacing:.3px;touch-action:manipulation;transition:.12s transform,.12s filter}
+.pgroup{display:flex;flex-direction:column;align-items:center;gap:3px}
+.plabel{font-size:9px;letter-spacing:1.2px;opacity:.55;text-transform:uppercase;font-weight:700}
+.pdiv{width:1px;height:28px;background:color-mix(in oklab,#8cf 14%,#000);flex-shrink:0}
+.pcontrols{display:flex;gap:6px;align-items:center}
+.pcontrols button{width:40px;height:40px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;font-size:16px;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s transform,.12s border-color,.12s background}
+.pcontrols button:hover{transform:translateY(-1px);border-color:#bff}
+#pauseBtn.playing{background:color-mix(in oklab,#1a3860 78%,#000);border-color:#8cf}
+#up{padding:14px 22px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;font-size:14px;letter-spacing:.4px;touch-action:manipulation;transition:.12s transform,.12s filter}
 #up:hover{transform:translateY(-1px);filter:saturate(1.1)}#up:disabled{opacity:.35;cursor:not-allowed;transform:none;filter:none}
 #hint{font-size:11px;opacity:0;visibility:hidden;max-width:88ch;line-height:1.2;white-space:normal;overflow:visible;text-overflow:clip;flex:1 1 240px;text-align:center;transition:opacity .15s ease,visibility .15s ease}
 #panel:hover #hint,#panel:focus-within #hint{opacity:.84;visibility:visible}
@@ -38,7 +45,10 @@
 #panel{bottom:0;border-radius:16px 16px 0 0;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));gap:8px;row-gap:6px}
 .slot{gap:4px}.slot button{width:44px;height:44px;font-size:16px;border-radius:10px}
 #speed button{width:40px;height:36px;font-size:11px}
-#up{padding:8px 10px;font-size:11px}
+#up{padding:10px 14px;font-size:12px}
+.pcontrols button{width:38px;height:38px;font-size:14px}
+.pdiv{height:22px}
+.plabel{font-size:8px}
 #hint{flex-basis:100%;font-size:10px;max-width:none}
 #hud{gap:6px;padding:8px 10px}.k{min-width:62px}.k b{font-size:15px}.k span{font-size:9px}
 }
@@ -55,10 +65,18 @@
 <div id=note></div>
 
 <div id=panel>
-  <div class=slot id=ts></div>
-  <div class=slot id=ws></div>
-  <div class=slot id=speed></div>
+  <div class=pgroup><div class=plabel>CHASSIS</div><div class=slot id=ts></div></div>
+  <div class=pdiv></div>
+  <div class=pgroup><div class=plabel>WEAPON</div><div class=slot id=ws></div></div>
+  <div class=pdiv></div>
+  <div class=pgroup><div class=plabel>SPEED</div><div class=slot id=speed></div></div>
+  <div class=pdiv></div>
   <button id=up disabled>Upgrade</button>
+  <div class=pdiv></div>
+  <div class=pcontrols>
+    <button id=pauseBtn title="Pause / Resume (Space)">⏸</button>
+    <button id=restartBtn title="Restart (R)">↺</button>
+  </div>
   <div id=hint></div>
 </div>
 
@@ -75,7 +93,7 @@
     <div class=col><h2>Weapons <i id=wc>0/3</i></h2><div class=grid id=wl></div></div>
   </div>
   <div class=row><button id=start disabled>Start</button><button id=rand>Random</button><button id=preset>Preset</button></div>
-  <div class=small>Controls: click empty space to place. Click tower to select. Upgrade button or U upgrades selected tower. Right click tower to sell. Q/E cycle chassis. 1-3 select weapon. [ / ] or - / + to change speed. Space pause.</div>
+  <div class=small>Controls: click empty space to place. Click tower to select. Upgrade button or U upgrades selected tower. Right click tower to sell. Q/E cycle chassis. 1-3 select weapon. [ / ] or - / + to change speed. Space or ⏸ button to pause. ↺ button or R to restart.</div>
 </div></div>
 
 <script type=module src="./js/main.js"></script>
