@@ -18,6 +18,8 @@ const ts = $('ts');
 const ws = $('ws');
 const speed = $('speed');
 const upB = $('up');
+const pauseBtn = $('pauseBtn');
+const restartBtn = $('restartBtn');
 const tip = $('tip');
 const note = $('note');
 const waveE = $('wave');
@@ -676,12 +678,15 @@ function mkBar() {
     upB.disabled = true;
     upB.title = '';
   }
+  pauseBtn.textContent = paused ? '▶' : '⏸';
+  pauseBtn.classList.toggle('playing', !paused && !dead);
+  pauseBtn.title = paused ? 'Resume (Space)' : 'Pause (Space)';
   hint.textContent = dead === 2
-    ? 'Victory! Restart from menu with R.'
+    ? 'Victory! Click ↺ or press R to restart.'
     : dead
-    ? 'Defeated. Restart from menu with R.'
+    ? 'Defeated. Click ↺ or press R to restart.'
     : paused
-      ? 'Paused. Space to resume.'
+      ? 'Paused. Click ▶ or press Space to resume.'
       : sel >= 0
         ? `Selected: ${T[tt[sel]].n} + ${W[tw[sel]].n} Tier ${tier[sel]} (U to upgrade, right click sell)`
         : `Click to place ${T[selT[st]].n} with ${W[selW[sw]].n}.`;
@@ -1351,6 +1356,7 @@ addEventListener('keydown', (e) => {
     mkBar();
   } else if (k === ' ') {
     paused = !paused;
+    if (paused) showNote('Paused', 1.2);
     e.preventDefault();
     mkBar();
   } else if (k === 'u' || k === 'U') {
@@ -1444,6 +1450,20 @@ speed.onclick = (e) => {
 };
 
 const SAVE_KEY = 'galactic_td_save';
+
+pauseBtn.onclick = () => {
+  if (menu.style.display !== 'none') return;
+  paused = !paused;
+  if (paused) showNote('Paused', 1.2);
+  mkBar();
+};
+
+restartBtn.onclick = () => {
+  try { localStorage.removeItem(SAVE_KEY); } catch {}
+  menu.style.display = 'grid';
+  applySel();
+  tip.style.opacity = 0;
+};
 
 function saveGame() {
   if (menu.style.display !== 'none' || dead) return;
