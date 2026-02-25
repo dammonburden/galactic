@@ -412,6 +412,161 @@ function mkBg() {
   bgctx.stroke();
 }
 
+/* ── dynamic background ── */
+const NM = 45, NP = 5, NS = 4;
+const mX = new Float32Array(NM), mY = new Float32Array(NM);
+const mVx = new Float32Array(NM), mVy = new Float32Array(NM);
+const mSz = new Float32Array(NM), mAl = new Float32Array(NM);
+const mPh = new Float32Array(NM), mHu = new Uint16Array(NM);
+const pX = new Float32Array(NP), pY = new Float32Array(NP);
+const pSz = new Float32Array(NP), pHu = new Uint16Array(NP);
+const pPh = new Float32Array(NP), pSp = new Float32Array(NP);
+const sX = new Float32Array(NS), sY = new Float32Array(NS);
+const sDx = new Float32Array(NS), sDy = new Float32Array(NS);
+const sLf = new Float32Array(NS), sMx = new Float32Array(NS);
+let dynT = 0, hOff = 0;
+const MAP_HUE = [[180, 210], [260, 300], [20, 55], [120, 170]];
+
+function initDynBg() {
+  hOff = (Math.random() * 40 - 20) | 0;
+  const [h1, h2] = MAP_HUE[mapIdx] || MAP_HUE[0];
+  const ha = h1 + hOff, hb = h2 + hOff, hr = hb - ha;
+  for (let i = 0; i < NM; i++) {
+    mX[i] = Math.random() * w;
+    mY[i] = Math.random() * h;
+    mVx[i] = (Math.random() - 0.5) * 8;
+    mVy[i] = (Math.random() - 0.5) * 8;
+    mSz[i] = 1 + Math.random() * 2.5;
+    mAl[i] = 0.05 + Math.random() * 0.15;
+    mPh[i] = Math.random() * 6.283;
+    mHu[i] = ((ha + Math.random() * hr) % 360 + 360) % 360;
+  }
+  for (let i = 0; i < NP; i++) {
+    pX[i] = w * 0.15 + Math.random() * w * 0.7;
+    pY[i] = h * 0.15 + Math.random() * h * 0.7;
+    pSz[i] = 80 + Math.random() * 160;
+    pHu[i] = ((ha + Math.random() * hr) % 360 + 360) % 360;
+    pPh[i] = Math.random() * 6.283;
+    pSp[i] = 0.08 + Math.random() * 0.25;
+  }
+  for (let i = 0; i < NS; i++) sLf[i] = -1;
+  dynT = performance.now() * 0.001;
+}
+
+function drawDynBg() {
+  const now = performance.now() * 0.001;
+  const dt = Math.min(0.1, now - dynT);
+  dynT = now;
+
+  /* nebula puffs — large faint color clouds */
+  for (let i = 0; i < NP; i++) {
+    const x = pX[i] + Math.sin(now * pSp[i] + pPh[i]) * 50;
+    const y = pY[i] + Math.cos(now * pSp[i] * 0.7 + pPh[i]) * 35;
+    const r = pSz[i] + Math.sin(now * 0.25 + pPh[i]) * 25;
+    const a = 0.028 + Math.sin(now * 0.18 + pPh[i]) * 0.012;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `hsl(${pHu[i]} 55% 45%/${a})`);
+    g.addColorStop(0.6, `hsl(${pHu[i]} 45% 35%/${a * 0.35})`);
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(x - r, y - r, r * 2, r * 2);
+  }
+
+  /* floating motes — tiny drifting particles */
+  for (let i = 0; i < NM; i++) {
+    mX[i] += mVx[i] * dt;
+    mY[i] += mVy[i] * dt;
+    if (mX[i] < -10) mX[i] += w + 20;
+    if (mX[i] > w + 10) mX[i] -= w + 20;
+    if (mY[i] < -10) mY[i] += h + 20;
+    if (mY[i] > h + 10) mY[i] -= h + 20;
+    const pulse = 0.5 + 0.5 * Math.sin(now * 1.2 + mPh[i]);
+    ctx.globalAlpha = mAl[i] * (0.3 + pulse * 0.7);
+    ctx.fillStyle = hsl(mHu[i], 65, 70, 1);
+    ctx.beginPath();
+    ctx.arc(mX[i], mY[i], mSz[i] * (0.6 + pulse * 0.4), 0, 6.283);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  /* map-specific accent effects */
+  if (mapIdx === 0) {
+    /* Spiral — slow-rotating galaxy arms */
+    ctx.save();
+    ctx.translate(cx, cy);
+    const armR = Math.min(w, h) * 0.52;
+    for (let a = 0; a < 3; a++) {
+      const base = now * 0.1 + a * 2.094;
+      ctx.strokeStyle = `hsl(${190 + hOff} 50% 60%/.04)`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let j = 0; j <= 80; j++) {
+        const t = j / 80;
+        const ang = base + t * 5;
+        const r = t * armR;
+        j ? ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r)
+          : ctx.moveTo(Math.cos(ang) * r, Math.sin(ang) * r);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  } else if (mapIdx === 1) {
+    /* Zigzag — horizontal scanning light bands */
+    for (let i = 0; i < 3; i++) {
+      const y0 = ((now * 18 + i * h / 3) % (h + 60)) - 30;
+      const g = ctx.createLinearGradient(0, y0 - 25, 0, y0 + 25);
+      g.addColorStop(0, 'transparent');
+      g.addColorStop(0.5, `hsl(${270 + hOff} 50% 60%/.035)`);
+      g.addColorStop(1, 'transparent');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, y0 - 25, w, 50);
+    }
+  } else if (mapIdx === 2) {
+    /* Figure-8 — expanding ring pulses from center */
+    for (let i = 0; i < 3; i++) {
+      const phase = (now * 0.3 + i * 1.1) % 3;
+      const r = phase / 3 * Math.min(w, h) * 0.5;
+      const a = 0.06 * (1 - phase / 3);
+      ctx.strokeStyle = `hsl(${35 + hOff} 70% 60%/${a})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, 6.283);
+      ctx.stroke();
+    }
+  } else if (mapIdx === 3) {
+    /* Star — shooting star streaks */
+    for (let i = 0; i < NS; i++) {
+      if (sLf[i] <= 0) {
+        if (Math.random() < 0.008) {
+          const ang = Math.random() * 6.283;
+          const spd = 250 + Math.random() * 350;
+          sX[i] = Math.random() * w;
+          sY[i] = Math.random() * h * 0.6;
+          sDx[i] = Math.cos(ang) * spd;
+          sDy[i] = Math.sin(ang) * spd;
+          sMx[i] = sLf[i] = 0.4 + Math.random() * 0.8;
+        }
+        continue;
+      }
+      sLf[i] -= dt;
+      sX[i] += sDx[i] * dt;
+      sY[i] += sDy[i] * dt;
+      const p = sLf[i] / sMx[i];
+      const len = 25 + p * 45;
+      const mag = Math.hypot(sDx[i], sDy[i]);
+      const nx = sDx[i] / mag, ny = sDy[i] / mag;
+      ctx.globalAlpha = p * 0.45;
+      ctx.strokeStyle = `hsl(${150 + hOff} 60% 80%/1)`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sX[i], sY[i]);
+      ctx.lineTo(sX[i] - nx * len, sY[i] - ny * len);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
 function resize() {
   dpr = devicePixelRatio || 1;
   w = innerWidth;
@@ -422,6 +577,7 @@ function resize() {
   cy = h * 0.5;
   mkPath();
   mkBg();
+  initDynBg();
   mkSpr(tSpr, T, 54, 10, 0.9);
   mkSpr(wSpr, W, 42, 180, 0.86);
   mkSpr(eSpr, E, 46, 300, 0.9);
@@ -1033,6 +1189,7 @@ function upd(dt) {
 function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.drawImage(bg, 0, 0, w, h);
+  drawDynBg();
   for (let i = 0; i < en; i++) {
     const cnt = ec[i];
     if (cnt <= 0) continue;
