@@ -15,6 +15,7 @@
 .pcontrols{display:flex;gap:6px;align-items:center}
 .pcontrols button{width:40px;height:40px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;font-size:16px;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s transform,.12s border-color,.12s background}
 .pcontrols button:hover{transform:translateY(-1px);border-color:#bff}
+.pactions{display:flex;gap:10px;align-items:center}
 #pauseBtn.playing{background:color-mix(in oklab,#1a3860 78%,#000);border-color:#8cf}
 #up{padding:14px 22px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;font-size:14px;letter-spacing:.4px;touch-action:manipulation;transition:.12s transform,.12s filter}
 #up:hover{transform:translateY(-1px);filter:saturate(1.1)}#up:disabled{opacity:.35;cursor:not-allowed;transform:none;filter:none}
@@ -41,15 +42,17 @@
 .diff-row button small{display:block;font-weight:400;opacity:.7;font-size:9px;margin-top:2px}
 @media (max-width:900px){.cols{grid-template-columns:1fr}.grid{grid-template-columns:repeat(4,1fr)}}
 @media (max-width:480px){.grid{grid-template-columns:repeat(3,1fr)}.grid button b{font-size:10px}.grid button i{font-size:9px}.grid button{padding:6px 4px 4px}}
-@media (max-width:600px){
-#panel{bottom:0;border-radius:16px 16px 0 0;padding:8px 10px calc(8px + env(safe-area-inset-bottom,0px));gap:8px;row-gap:6px}
-.slot{gap:4px}.slot button{width:44px;height:44px;font-size:16px;border-radius:10px}
-#speed button{width:40px;height:36px;font-size:11px}
-#up{padding:10px 14px;font-size:12px}
-.pcontrols button{width:38px;height:38px;font-size:14px}
-.pdiv{height:22px}
-.plabel{font-size:8px}
-#hint{flex-basis:100%;font-size:10px;max-width:none}
+@media (max-width:768px){
+#panel{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;bottom:0;left:0;right:0;transform:none;max-width:100%;border-radius:16px 16px 0 0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));align-items:end}
+.pdiv{display:none}
+.pgroup{justify-self:center}
+.slot{gap:clamp(3px,1.2vw,6px)}.slot button{width:clamp(38px,10vw,50px);height:clamp(38px,10vw,50px);font-size:clamp(15px,4vw,20px);border-radius:12px}
+#speed button{width:clamp(34px,8.5vw,46px);height:clamp(32px,7.5vw,42px);font-size:clamp(10px,2.8vw,13px)}
+.pcontrols button{width:clamp(38px,9vw,48px);height:clamp(38px,9vw,48px);font-size:clamp(14px,3.5vw,18px)}
+#up{padding:clamp(10px,2.5vw,16px) clamp(14px,3.5vw,24px);font-size:clamp(12px,3vw,15px)}
+.plabel{font-size:clamp(8px,2.2vw,10px);letter-spacing:1px}
+.pactions{justify-self:center;flex-wrap:wrap;justify-content:center}
+#hint{grid-column:1/-1;text-align:center;font-size:11px;max-width:none;flex:none}
 #hud{gap:6px;padding:8px 10px}.k{min-width:62px}.k b{font-size:15px}.k span{font-size:9px}
 }
 @media (hover:none){#hint{opacity:.84;visibility:visible}}
@@ -71,11 +74,12 @@
   <div class=pdiv></div>
   <div class=pgroup><div class=plabel>SPEED</div><div class=slot id=speed></div></div>
   <div class=pdiv></div>
-  <button id=up disabled>Upgrade</button>
-  <div class=pdiv></div>
-  <div class=pcontrols>
-    <button id=pauseBtn title="Pause / Resume (Space)">⏸</button>
-    <button id=restartBtn title="Restart (R)">↺</button>
+  <div class=pactions>
+    <button id=up disabled>Upgrade</button>
+    <div class=pcontrols>
+      <button id=pauseBtn title="Pause / Resume (Space)">⏸</button>
+      <button id=restartBtn title="Restart (R)">↺</button>
+    </div>
   </div>
   <div id=hint></div>
 </div>
