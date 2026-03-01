@@ -1014,6 +1014,80 @@ const ft = new Uint8Array(MF);
 const fxp = new Float32Array(MF);
 const fyp = new Float32Array(MF);
 
+// --- Status effect arrays (Feature 1) ---
+const eSlow = new Float32Array(ME);     // slow timer
+const eBurn = new Float32Array(ME);     // burn timer
+const eBurnDmg = new Float32Array(ME);  // burn DPS
+const eExpose = new Float32Array(ME);   // expose timer
+const eGlitch = new Float32Array(ME);   // glitch (stun) timer
+const eShatter = new Uint8Array(ME);    // shatter applied flag
+const eBaseSpd = new Float32Array(ME);  // original speed (before slow)
+
+// --- Particle system (Feature 3) ---
+const MP = 2000;
+let pn = 0;
+let pHead = 0;
+const partX = new Float32Array(MP);
+const partY = new Float32Array(MP);
+const partVX = new Float32Array(MP);
+const partVY = new Float32Array(MP);
+const partLife = new Float32Array(MP);
+const partMaxLife = new Float32Array(MP);
+const partR = new Uint8Array(MP);
+const partG = new Uint8Array(MP);
+const partB = new Uint8Array(MP);
+
+function spawnParticle(x, y, vx, vy, r, g, b, life) {
+  const i = pHead;
+  pHead = (pHead + 1) % MP;
+  if (pn < MP) pn++;
+  partX[i] = x;
+  partY[i] = y;
+  partVX[i] = vx;
+  partVY[i] = vy;
+  partLife[i] = life;
+  partMaxLife[i] = life;
+  partR[i] = r;
+  partG[i] = g;
+  partB[i] = b;
+}
+
+function spawnHitParticles(x, y, count, r, g, b) {
+  for (let j = 0; j < count; j++) {
+    const a = rng() * 6.283;
+    const s = 30 + rng() * 60;
+    spawnParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, r, g, b, 0.3 + rng() * 0.3);
+  }
+}
+
+function spawnKillBurst(x, y, count, isBoss) {
+  const n = isBoss ? count * 3 : count;
+  for (let j = 0; j < n; j++) {
+    const a = rng() * 6.283;
+    const s = 40 + rng() * (isBoss ? 120 : 80);
+    const r = isBoss ? 255 : 200 + (rng() * 55) | 0;
+    const g = isBoss ? (100 + rng() * 100) | 0 : (180 + rng() * 75) | 0;
+    const b = isBoss ? (50 + rng() * 50) | 0 : (220 + rng() * 35) | 0;
+    spawnParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, r, g, b, 0.5 + rng() * 0.5);
+  }
+}
+
+// --- Tower stats tracking (Feature 6) ---
+const tKills = new Float64Array(MT);
+const tDmg = new Float64Array(MT);
+let runTotalKills = 0;
+let runTotalDmg = 0;
+let runStartTime = 0;
+let statsSaved = false;
+
+// --- Tower synergy (Feature 5) ---
+const synBonus = new Float32Array(MT);
+
+// --- Wave preview (Feature 2) ---
+let nextWaveInfo = [];
+let nextWaveBoss = 0;
+let nextWaveMega = 0;
+
 let wave = 1;
 let wait = 1.4;
 let money = 220;
@@ -1047,7 +1121,8 @@ function mkBar() {
   s = '';
   for (let i = 0; i < selW.length; i++) {
     const weapon = W[selW[i]];
-    s += `<button data-i=${i} class=${i === sw ? 'on' : ''} data-tip="${weapon.i} ${weapon.n}\nWeapon cost ${weapon.c}c">${weapon.i}</button>`;
+    const fxTip = weapon.fx ? `\nEffect: ${weapon.fx}` : '';
+    s += `<button data-i=${i} class=${i === sw ? 'on' : ''} data-tip="${weapon.i} ${weapon.n}\nWeapon cost ${weapon.c}c${fxTip}">${weapon.i}</button>`;
   }
   ws.innerHTML = s;
   if (sel >= 0) {
@@ -1120,6 +1195,17 @@ function resetRun() {
   bossPending = 0;
   megaPending = 0;
   timeScale = 1;
+  pn = 0;
+  pHead = 0;
+  runTotalKills = 0;
+  runTotalDmg = 0;
+  runStartTime = performance.now();
+  statsSaved = false;
+  for (let i = 0; i < MT; i++) { tKills[i] = 0; tDmg[i] = 0; synBonus[i] = 1; }
+  nextWaveInfo = [];
+  nextWaveBoss = 0;
+  nextWaveMega = 0;
+  calcWavePreview();
   note.classList.remove('show');
   note.textContent = '';
   setSpeed(0);
@@ -1128,6 +1214,51 @@ function resetRun() {
 
 function waveBudget() {
   return wave < 2 ? gs.waveBudgetBase : Math.min(gs.waveBudgetMax, gs.waveBudgetBase + wave * gs.waveBudgetScale);
+}
+
+function calcWavePreview() {
+  const w = wave;
+  nextWaveBoss = w % gs.bossEvery === 0 ? 1 : 0;
+  nextWaveMega = w % gs.megaBossEvery === 0 ? 1 : 0;
+  const packs = 4 + Math.min(6, (w / 3) | 0);
+  const counts = new Array(E.length).fill(0);
+  const base = w < 2 ? gs.waveBudgetBase : Math.min(gs.waveBudgetMax, gs.waveBudgetBase + w * gs.waveBudgetScale);
+  for (let p = 0; p < packs; p++) {
+    const k = (Math.random() * E.length) | 0;
+    const cnt = Math.max(1, (base * E[k].c * 0.95) | 0);
+    counts[k] += cnt;
+  }
+  nextWaveInfo = [];
+  for (let i = 0; i < E.length; i++) {
+    if (counts[i] > 0) nextWaveInfo.push({ type: i, icon: E[i].i, count: counts[i], ab: E[i].ab || '' });
+  }
+}
+
+function calcSynergies() {
+  const synRadius = gs.towerMinDist * 4;
+  for (let i = 0; i < tn; i++) {
+    let bonus = 1.0;
+    let sameCount = 0;
+    let hasSpawnerNeighbor = false;
+    let hasRangeComplement = false;
+    const ch = T[tt[i]];
+    const myRange = ch.r;
+    const isSpawner = !!ch.spawn;
+    for (let j = 0; j < tn; j++) {
+      if (j === i) continue;
+      if (dist2(tx[i], ty[i], tx[j], ty[j]) > synRadius) continue;
+      const ch2 = T[tt[j]];
+      if (tt[i] === tt[j]) sameCount++;
+      if (ch2.spawn && !isSpawner) hasSpawnerNeighbor = true;
+      if (!ch2.spawn && isSpawner) hasSpawnerNeighbor = true;
+      const rangeDiff = Math.abs(myRange - ch2.r);
+      if (rangeDiff > 30) hasRangeComplement = true;
+    }
+    if (sameCount > 0) bonus *= Math.max(0.8, 1 - 0.05 * sameCount);
+    if (hasRangeComplement) bonus *= 1.08;
+    if (hasSpawnerNeighbor && isSpawner) bonus *= 1.15;
+    synBonus[i] = bonus;
+  }
 }
 
 function spawnPack(isBoss) {
@@ -1143,6 +1274,7 @@ function spawnPack(isBoss) {
   const i = en++;
   ep[i] = 0;
   es[i] = sp;
+  eBaseSpd[i] = sp;
   et[i] = k;
   ec[i] = cnt;
   ek[i] = e.core;
@@ -1150,6 +1282,12 @@ function spawnPack(isBoss) {
   eh[i] = hpU * cnt;
   eb[i] = b;
   eboss[i] = isBoss ? isBoss : 0;
+  eSlow[i] = 0;
+  eBurn[i] = 0;
+  eBurnDmg[i] = 0;
+  eExpose[i] = 0;
+  eGlitch[i] = 0;
+  eShatter[i] = 0;
 }
 
 function spawnWave() {
@@ -1158,6 +1296,7 @@ function spawnWave() {
   spawnTick = 0;
   bossPending = wave % gs.bossEvery === 0 ? 1 : 0;
   megaPending = wave % gs.megaBossEvery === 0 ? 1 : 0;
+  calcSynergies();
   if (megaPending) {
     showNote(`Wave ${wave}: abyss titan inbound`);
   } else {
@@ -1165,31 +1304,106 @@ function spawnWave() {
   }
 }
 
-function dmgPack(i, dm) {
+function dmgPack(i, dm, towerIdx, weaponFx) {
+  // Enemy ability: armor reduces damage by 25%
+  if (!eboss[i] && E[et[i]].ab === 'armor') dm *= 0.75;
+  // Enemy ability: phase has 20% dodge chance
+  if (!eboss[i] && E[et[i]].ab === 'phase' && rng() < 0.2) return;
+  // Weapon effect: pierce ignores 30% of HP scaling (flat bonus)
+  if (weaponFx === 'pierce') dm *= 1.3;
+  // Status effect: expose increases damage taken
+  if (eExpose[i] > 0) dm *= 1.2;
+  // Tower synergy bonus
+  if (towerIdx >= 0 && towerIdx < tn) dm *= synBonus[towerIdx];
+  // Stats tracking
+  if (towerIdx >= 0 && towerIdx < tn) { tDmg[towerIdx] += dm; }
+  runTotalDmg += dm;
+  // Hit particles
+  spawnHitParticles(ex[i], ey[i], 3 + (rng() * 3) | 0, 180, 240, 255);
+  // Apply status effect from weapon
+  if (weaponFx) {
+    if (weaponFx === 'expose') eExpose[i] = 2.0;
+    else if (weaponFx === 'slow') eSlow[i] = 2.0;
+    else if (weaponFx === 'burn') { eBurn[i] = 3.0; eBurnDmg[i] = Math.max(eBurnDmg[i], 8); }
+    else if (weaponFx === 'glitch' && rng() < 0.15) eGlitch[i] = 0.5;
+    else if (weaponFx === 'warp') ep[i] = Math.max(0, ep[i] - 0.02);
+    else if (weaponFx === 'shatter' && !eShatter[i]) { eShatter[i] = 1; eh[i] *= 0.85; }
+    else if (weaponFx === 'vortex') {
+      const vr2 = 3600;
+      for (let j = 0; j < en; j++) {
+        if (j === i) continue;
+        const dx = ex[j] - ex[i];
+        const dy = ey[j] - ey[i];
+        if (dx * dx + dy * dy < vr2) ep[j] = Math.max(0, ep[j] - 0.005);
+      }
+    }
+  }
   const h = eh[i] - dm;
   if (h <= 0) {
-    money = toInt(money + ec[i] * eb[i]);
+    const killCount = ec[i];
+    const killBounty = ec[i] * eb[i];
+    const isBossKill = eboss[i];
+    const killX = ex[i];
+    const killY = ey[i];
+    const killType = et[i];
+    const killProg = ep[i];
+    const killSpd = eBaseSpd[i];
+    money = toInt(money + killBounty);
+    if (towerIdx >= 0 && towerIdx < tn) tKills[towerIdx] += killCount;
+    runTotalKills += killCount;
+    // Kill burst particles
+    spawnKillBurst(killX, killY, 10, isBossKill);
     eh[i] = 0;
     ec[i] = 0;
+    // Enemy ability: split spawns 2 packs on death
+    const shouldSplit = !isBossKill && E[killType].ab === 'split' && en < ME - 4;
     en--;
     if (i !== en) {
-      ep[i] = ep[en];
-      ex[i] = ex[en];
-      ey[i] = ey[en];
-      et[i] = et[en];
-      ec[i] = ec[en];
-      ehu[i] = ehu[en];
-      eh[i] = eh[en];
-      es[i] = es[en];
-      eb[i] = eb[en];
-      ek[i] = ek[en];
-      eboss[i] = eboss[en];
+      ep[i] = ep[en]; ex[i] = ex[en]; ey[i] = ey[en];
+      et[i] = et[en]; ec[i] = ec[en]; ehu[i] = ehu[en];
+      eh[i] = eh[en]; es[i] = es[en]; eb[i] = eb[en];
+      ek[i] = ek[en]; eboss[i] = eboss[en];
+      eSlow[i] = eSlow[en]; eBurn[i] = eBurn[en]; eBurnDmg[i] = eBurnDmg[en];
+      eExpose[i] = eExpose[en]; eGlitch[i] = eGlitch[en]; eShatter[i] = eShatter[en];
+      eBaseSpd[i] = eBaseSpd[en];
+    }
+    if (shouldSplit) {
+      const halfCnt = Math.max(1, (killCount * 0.5) | 0);
+      const splitProg = Math.min(0.95, killProg || 0.5);
+      for (let s = 0; s < 2; s++) {
+        if (en >= ME - 1) break;
+        const si = en++;
+        ep[si] = Math.max(0, splitProg - 0.01 + rng() * 0.02);
+        const u = ep[si] * (ps - 1);
+        let j2 = u | 0; let f2 = u - j2;
+        if (j2 >= ps - 1) { j2 = ps - 2; f2 = 1; }
+        ex[si] = px[j2] + (px[j2 + 1] - px[j2]) * f2;
+        ey[si] = py[j2] + (py[j2 + 1] - py[j2]) * f2;
+        et[si] = killType;
+        ec[si] = halfCnt;
+        const dif = DIFF[diff];
+        const splitHpU = (1.8 + wave * 0.16) * E[killType].hp * 0.5 * dif.hpMul;
+        ehu[si] = splitHpU;
+        eh[si] = splitHpU * halfCnt;
+        eBaseSpd[si] = killSpd || 0.03;
+        es[si] = eBaseSpd[si] * 1.1;
+        eb[si] = 0;
+        ek[si] = E[killType].core;
+        eboss[si] = 0;
+        eSlow[si] = 0; eBurn[si] = 0; eBurnDmg[si] = 0;
+        eExpose[si] = 0; eGlitch[si] = 0; eShatter[si] = 0;
+      }
     }
     return;
   }
   const before = ec[i];
   const nc = Math.ceil(h / ehu[i]);
-  if (nc < before) money = toInt(money + (before - nc) * eb[i]);
+  if (nc < before) {
+    const killed = before - nc;
+    money = toInt(money + killed * eb[i]);
+    if (towerIdx >= 0 && towerIdx < tn) tKills[towerIdx] += killed;
+    runTotalKills += killed;
+  }
   ec[i] = nc;
   eh[i] = h;
 }
@@ -1214,6 +1428,10 @@ function place(x, y, ti, wi) {
   cd[i] = 0;
   bt[i] = 0;
   thp[i] = 100;
+  tKills[i] = 0;
+  tDmg[i] = 0;
+  synBonus[i] = 1;
+  calcSynergies();
 }
 
 function pickTower(x, y) {
@@ -1244,9 +1462,13 @@ function sell(i) {
     by[i] = by[tn];
     bt[i] = bt[tn];
     thp[i] = thp[tn];
+    tKills[i] = tKills[tn];
+    tDmg[i] = tDmg[tn];
+    synBonus[i] = synBonus[tn];
     if (sel === tn) sel = i;
   }
   if (sel === i) sel = -1;
+  calcSynergies();
   mkBar();
 }
 
@@ -1326,7 +1548,10 @@ function showTip() {
     const i = hoverT;
     const sType = T[tt[i]].spawn;
     const extra = sType === 3 ? ' Airdrop' : sType === 2 ? ' Brawler' : sType ? ' Spawner' : '';
-    tip.innerHTML = `${T[tt[i]].i} ${T[tt[i]].n}${extra}<br>${W[tw[i]].i} ${W[tw[i]].n}<br>Tier ${tier[i]} | Integrity ${thp[i] | 0}`;
+    const wep = W[tw[i]];
+    const fxLabel = wep.fx ? ` [${wep.fx}]` : '';
+    const synLabel = synBonus[i] > 1.01 ? ` +${((synBonus[i]-1)*100)|0}% syn` : synBonus[i] < 0.99 ? ` ${((synBonus[i]-1)*100)|0}% syn` : '';
+    tip.innerHTML = `${T[tt[i]].i} ${T[tt[i]].n}${extra}<br>${wep.i} ${wep.n}${fxLabel}<br>Tier ${tier[i]}${synLabel}<br>Kills ${fmt(tKills[i])} | Dmg ${fmt(tDmg[i])}`;
     positionTip(x, y);
     return;
   }
@@ -1335,7 +1560,15 @@ function showTip() {
     const bossType = eboss[i];
     const name = bossType === 2 ? MB.n : bossType ? B.n : E[et[i]].n;
     const icon = bossType === 2 ? MB.i : bossType ? B.i : E[et[i]].i;
-    tip.innerHTML = `${icon} ${name}<br>HP ${fmt(eh[i])} | Count ${fmt(ec[i])}`;
+    const ab = bossType ? 'regen' : E[et[i]].ab;
+    const abLabel = ab ? ` [${ab}]` : '';
+    let fxList = '';
+    if (eSlow[i] > 0) fxList += ' slow';
+    if (eBurn[i] > 0) fxList += ' burn';
+    if (eExpose[i] > 0) fxList += ' expose';
+    if (eGlitch[i] > 0) fxList += ' glitch';
+    if (eShatter[i]) fxList += ' shatter';
+    tip.innerHTML = `${icon} ${name}${abLabel}<br>HP ${fmt(eh[i])} | Count ${fmt(ec[i])}${fxList ? '<br>Effects:' + fxList : ''}`;
     positionTip(x, y);
     return;
   }
@@ -1396,21 +1629,46 @@ function upd(dt) {
     if (noteT <= 0) note.classList.remove('show');
   }
   for (let i = 0; i < en; ) {
+    // Tick status effect timers
+    if (eSlow[i] > 0) { eSlow[i] -= dt; es[i] = eBaseSpd[i] * 0.7; } else { es[i] = eBaseSpd[i]; }
+    if (eExpose[i] > 0) eExpose[i] -= dt;
+    if (eGlitch[i] > 0) { eGlitch[i] -= dt; es[i] = 0; }
+    if (eBurn[i] > 0) {
+      eBurn[i] -= dt;
+      const burnDm = eBurnDmg[i] * dt;
+      eh[i] -= burnDm;
+      runTotalDmg += burnDm;
+      if (eBurn[i] > 0 && Math.random() < dt * 3) spawnParticle(ex[i] + (Math.random()-0.5)*6, ey[i], (Math.random()-0.5)*15, -20 - Math.random()*30, 255, 140 + (Math.random()*60)|0, 30, 0.4);
+      if (eh[i] <= 0) {
+        money = toInt(money + ec[i] * eb[i]);
+        runTotalKills += ec[i];
+        spawnKillBurst(ex[i], ey[i], 8, 0);
+        en--;
+        if (i !== en) {
+          ep[i]=ep[en];et[i]=et[en];ec[i]=ec[en];ehu[i]=ehu[en];
+          eh[i]=eh[en];es[i]=es[en];eb[i]=eb[en];ek[i]=ek[en];eboss[i]=eboss[en];
+          eSlow[i]=eSlow[en];eBurn[i]=eBurn[en];eBurnDmg[i]=eBurnDmg[en];
+          eExpose[i]=eExpose[en];eGlitch[i]=eGlitch[en];eShatter[i]=eShatter[en];
+          eBaseSpd[i]=eBaseSpd[en];
+        }
+        continue;
+      }
+      const bnc = Math.ceil(eh[i] / ehu[i]);
+      if (bnc < ec[i]) { money = toInt(money + (ec[i] - bnc) * eb[i]); runTotalKills += ec[i] - bnc; ec[i] = bnc; }
+    }
+    // Boss regen: 1% max HP per second
+    if (eboss[i]) eh[i] = Math.min(ec[i] * ehu[i], eh[i] + ehu[i] * ec[i] * 0.01 * dt);
     ep[i] += es[i] * dt;
     if (ep[i] >= 1) {
       const dmgC = Math.max(1, (ec[i] * ek[i] * DIFF[diff].coreDmgMul) / 2400) | 0;
       core = Math.max(0, core - dmgC);
       en--;
       if (i !== en) {
-        ep[i] = ep[en];
-        et[i] = et[en];
-        ec[i] = ec[en];
-        ehu[i] = ehu[en];
-        eh[i] = eh[en];
-        es[i] = es[en];
-        eb[i] = eb[en];
-        ek[i] = ek[en];
-        eboss[i] = eboss[en];
+        ep[i]=ep[en];et[i]=et[en];ec[i]=ec[en];ehu[i]=ehu[en];
+        eh[i]=eh[en];es[i]=es[en];eb[i]=eb[en];ek[i]=ek[en];eboss[i]=eboss[en];
+        eSlow[i]=eSlow[en];eBurn[i]=eBurn[en];eBurnDmg[i]=eBurnDmg[en];
+        eExpose[i]=eExpose[en];eGlitch[i]=eGlitch[en];eShatter[i]=eShatter[en];
+        eBaseSpd[i]=eBaseSpd[en];
       }
       continue;
     }
@@ -1448,6 +1706,8 @@ function upd(dt) {
     let bp = -1;
     for (let k = en - 1; k >= 0; k--) {
       if (ec[k] <= 0) continue;
+      // Cloak ability: invisible for first 15% of path
+      if (!eboss[k] && E[et[k]].ab === 'cloak' && ep[k] < 0.15) continue;
       const dx = ex[k] - x;
       const dy = ey[k] - y;
       if (dx * dx + dy * dy < r2) {
@@ -1462,6 +1722,7 @@ function upd(dt) {
     const sat = 1 / (1 + gs.antiMonoFactor * Math.max(0, use[tw[i]] - 1));
     const eff = 1 / (1 + Math.max(0, heat[i] - 1.15) * 1.0);
     const dmg0 = we.d * ch.fr * (1 + gs.antiMonoFactor * (t - 1)) * sat * eff;
+    const wfx = we.fx || '';
     heat[i] += we.h * gs.antiMonoFactor;
     cd[i] = 1 / (we.f * ch.fr * (1 + 0.06 * (t - 1)));
     const tx0 = ex[tar];
@@ -1469,7 +1730,7 @@ function upd(dt) {
     bx[i] = tx0;
     by[i] = ty0;
     bt[i] = 0.085;
-    dmgPack(tar, dmg0);
+    dmgPack(tar, dmg0, i, wfx);
     if (we.ao) {
       const ar = range * we.ao;
       const ar2 = ar * ar;
@@ -1477,20 +1738,20 @@ function upd(dt) {
         if (j === tar || ec[j] <= 0) continue;
         const dx = ex[j] - tx0;
         const dy = ey[j] - ty0;
-        if (dx * dx + dy * dy < ar2) dmgPack(j, dmg0 * 0.42);
+        if (dx * dx + dy * dy < ar2) dmgPack(j, dmg0 * 0.42, i, wfx);
       }
     }
     if (we.ch) {
-      let k = we.ch;
-      let fall = 0.26;
-      for (let j = 0; j < en && k; j++) {
+      let kk = we.ch;
+      let fall = we.fx === 'overload' ? 0.36 : 0.26;
+      for (let j = 0; j < en && kk; j++) {
         if (j === tar || ec[j] <= 0) continue;
         const dx = ex[j] - tx0;
         const dy = ey[j] - ty0;
         if (dx * dx + dy * dy < range * range * 0.62) {
-          dmgPack(j, dmg0 * fall);
+          dmgPack(j, dmg0 * fall, i, wfx);
           fall *= 0.72;
-          k--;
+          kk--;
         }
       }
     }
@@ -1514,7 +1775,7 @@ function upd(dt) {
           const d = dist2(x, y, ex[j], ey[j]);
           if (d < 2500 && d < bd) { bd = d; hit = j; }
         }
-        if (hit >= 0) { dmgPack(hit, fd[i]); fcd[i] = 0.5; }
+        if (hit >= 0) { dmgPack(hit, fd[i], -1, ''); fcd[i] = 0.5; }
       }
       fd[i] += dt * 0.3;
       i++;
@@ -1541,7 +1802,7 @@ function upd(dt) {
           if (d < 1200 && d < bd) { bd = d; hit = j; }
         }
         if (hit >= 0) {
-          dmgPack(hit, fd[i]);
+          dmgPack(hit, fd[i], -1, '');
           fcd[i] = 0.4;
           if (ftype === 2) {
             ep[hit] = Math.max(0, ep[hit] - 0.012 * (1 + fd[i] * 0.01));
@@ -1551,6 +1812,15 @@ function upd(dt) {
       fd[i] += dt * 0.4;
       i++;
     }
+  }
+  // Update particles
+  for (let i = 0; i < MP; i++) {
+    if (partLife[i] <= 0) continue;
+    partLife[i] -= dt;
+    partX[i] += partVX[i] * dt;
+    partY[i] += partVY[i] * dt;
+    partVX[i] *= 0.96;
+    partVY[i] *= 0.96;
   }
   if (en === 0 && wait <= 0 && !dead) {
     updBest();
@@ -1569,6 +1839,7 @@ function upd(dt) {
       showNote(`Wave ${wave}/${maxWaves} cleared +${fmt(waveBonus)}c bonus +${intPct}% bank`);
       wave++;
       wait = gs.waitTime;
+      calcWavePreview();
     }
   }
   if (core <= 0 && dead === 0) {
@@ -1584,9 +1855,13 @@ function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.drawImage(bg, 0, 0, w, h);
   drawDynBg();
+  // Draw enemies
   for (let i = 0; i < en; i++) {
     const cnt = ec[i];
     if (cnt <= 0) continue;
+    // Cloak: semi-transparent when cloaked
+    const isCloaked = !eboss[i] && E[et[i]].ab === 'cloak' && ep[i] < 0.15;
+    if (isCloaked) ctx.globalAlpha = 0.25;
     let size = 14 + Math.log1p(cnt) * 2.2;
     if (size > 60) size = 60;
     let n = 1 + ((Math.log1p(cnt) * 1.15) | 0);
@@ -1598,6 +1873,8 @@ function draw() {
       const a = ph + (j * 6.283) / n;
       ctx.drawImage(spr, ex[i] - size * 0.5 + Math.cos(a) * rr, ey[i] - size * 0.5 + Math.sin(a) * rr, size, size);
     }
+    if (isCloaked) ctx.globalAlpha = 1;
+    // Health bar
     const max = ec[i] * ehu[i];
     const p = max > 0 ? eh[i] / max : 0;
     const barW = Math.max(24, size + 8);
@@ -1608,7 +1885,24 @@ function draw() {
     ctx.fillStyle = eboss[i] ? 'rgba(255,190,100,.9)' : 'rgba(255,120,120,.9)';
     ctx.fillRect(ex[i] - barW * 0.5, barY, barW * p, 5);
     ctx.globalAlpha = 1;
+    // Status effect indicators
+    let fxY = barY - 6;
+    if (eSlow[i] > 0) { ctx.fillStyle = 'rgba(100,180,255,.8)'; ctx.fillRect(ex[i] - 6, fxY, 4, 4); fxY -= 5; }
+    if (eBurn[i] > 0) { ctx.fillStyle = 'rgba(255,120,40,.8)'; ctx.fillRect(ex[i] - 1, fxY, 4, 4); fxY -= 5; }
+    if (eExpose[i] > 0) { ctx.fillStyle = 'rgba(255,255,100,.8)'; ctx.fillRect(ex[i] + 4, fxY, 4, 4); fxY -= 5; }
+    if (eGlitch[i] > 0) { ctx.fillStyle = 'rgba(200,100,255,.8)'; ctx.fillRect(ex[i] - 4, fxY, 4, 4); }
+    // Ability indicator
+    const ab = eboss[i] ? '' : E[et[i]].ab;
+    if (ab) {
+      ctx.globalAlpha = 0.6;
+      ctx.font = '8px monospace';
+      ctx.fillStyle = ab === 'armor' ? '#aaa' : ab === 'phase' ? '#aef' : ab === 'cloak' ? '#caf' : '#fc8';
+      ctx.textAlign = 'center';
+      ctx.fillText(ab === 'armor' ? 'A' : ab === 'phase' ? 'P' : ab === 'cloak' ? 'C' : 'S', ex[i], ey[i] + size * 0.5 + 10);
+      ctx.globalAlpha = 1;
+    }
   }
+  // Draw friendly units
   for (let i = 0; i < fn; i++) {
     let x, y;
     const ftype = ft[i];
@@ -1635,6 +1929,7 @@ function draw() {
     }
     ctx.globalAlpha = 1;
   }
+  // Draw towers
   for (let i = 0; i < tn; i++) {
     const ch = tt[i];
     const we = tw[i];
@@ -1647,6 +1942,24 @@ function draw() {
     ctx.globalAlpha = 0.98;
     ctx.drawImage(wSpr[we], x - s2 * 0.5, y - s2 * 0.5, s2, s2);
     ctx.globalAlpha = 1;
+    // Synergy indicator
+    if (synBonus[i] > 1.01) {
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = 'rgba(180,255,180,.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, sz * 0.5 + 7, 0, 6.283);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    } else if (synBonus[i] < 0.99) {
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = 'rgba(255,180,180,.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(x, y, sz * 0.5 + 7, 0, 6.283);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     if (bt[i] > 0) {
       ctx.globalAlpha = Math.min(1, bt[i] * 10);
       ctx.strokeStyle = 'rgba(180,255,255,.8)';
@@ -1665,6 +1978,47 @@ function draw() {
       ctx.stroke();
     }
   }
+  // Draw particles
+  for (let i = 0; i < MP; i++) {
+    if (partLife[i] <= 0) continue;
+    const a = Math.min(1, partLife[i] / partMaxLife[i]);
+    ctx.globalAlpha = a * 0.9;
+    ctx.fillStyle = `rgb(${partR[i]},${partG[i]},${partB[i]})`;
+    ctx.beginPath();
+    ctx.arc(partX[i], partY[i], 1.5 + a * 1.5, 0, 6.283);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  // Draw wave preview (between waves)
+  if (menu.style.display === 'none' && !dead && (wait > 0 || (en === 0 && pendingPacks === 0))) {
+    const prevX = w - 10;
+    const prevY = playTopInset + 6;
+    ctx.textAlign = 'right';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = 'rgba(200,230,255,.85)';
+    ctx.fillText(`Next: Wave ${wave}`, prevX, prevY + 12);
+    let row = 0;
+    for (let i = 0; i < nextWaveInfo.length; i++) {
+      const inf = nextWaveInfo[i];
+      const yy = prevY + 26 + row * 16;
+      ctx.font = '12px monospace';
+      ctx.fillStyle = 'rgba(220,240,255,.75)';
+      const abLabel = inf.ab ? ` [${inf.ab}]` : '';
+      ctx.fillText(`${inf.icon} x${inf.count}${abLabel}`, prevX, yy);
+      row++;
+    }
+    if (nextWaveBoss) {
+      ctx.fillStyle = 'rgba(255,200,100,.85)';
+      ctx.fillText(`${B.i} BOSS`, prevX, prevY + 26 + row * 16);
+      row++;
+    }
+    if (nextWaveMega) {
+      ctx.fillStyle = 'rgba(255,100,100,.9)';
+      ctx.fillText(`${MB.i} MEGA BOSS`, prevX, prevY + 26 + row * 16);
+    }
+    ctx.textAlign = 'left';
+  }
+  // Cursor
   if (!dead && menu.style.display === 'none') {
     ctx.globalAlpha = 0.18;
     ctx.strokeStyle = '#bff';
@@ -1678,6 +2032,56 @@ function draw() {
     ctx.arc(mx, my, 14, 0, 6.283);
     ctx.fill();
     ctx.globalAlpha = 1;
+  }
+  // Game over summary (Feature 6)
+  if (dead && menu.style.display === 'none') {
+    const elapsed = ((performance.now() - runStartTime) / 1000) | 0;
+    const minutes = (elapsed / 60) | 0;
+    const seconds = elapsed % 60;
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    ctx.fillRect(0, 0, w, h);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = dead === 2 ? 'rgba(120,255,180,.95)' : 'rgba(255,140,140,.95)';
+    ctx.font = 'bold 28px monospace';
+    ctx.fillText(dead === 2 ? 'VICTORY' : 'DEFEATED', cx, cy - 80);
+    ctx.fillStyle = 'rgba(220,240,255,.85)';
+    ctx.font = '16px monospace';
+    ctx.fillText(`${DIFF[diff].n} | ${MAPS[mapIdx].n} | Wave ${wave}/${maxWaves}`, cx, cy - 50);
+    ctx.font = '13px monospace';
+    ctx.fillStyle = 'rgba(200,220,240,.75)';
+    const lines = [
+      `Enemies destroyed: ${fmt(runTotalKills)}`,
+      `Total damage dealt: ${fmt(runTotalDmg)}`,
+      `Towers placed: ${tn}`,
+      `Time: ${minutes}m ${seconds}s`,
+    ];
+    // Find MVP tower
+    let mvpIdx = -1; let mvpDmg = 0;
+    for (let i = 0; i < tn; i++) { if (tDmg[i] > mvpDmg) { mvpDmg = tDmg[i]; mvpIdx = i; } }
+    if (mvpIdx >= 0) {
+      lines.push(`MVP: ${T[tt[mvpIdx]].i} ${T[tt[mvpIdx]].n} + ${W[tw[mvpIdx]].i} ${W[tw[mvpIdx]].n} (${fmt(tDmg[mvpIdx])} dmg, ${fmt(tKills[mvpIdx])} kills)`);
+    }
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], cx, cy - 16 + i * 22);
+    }
+    ctx.fillStyle = 'rgba(180,200,220,.6)';
+    ctx.font = '12px monospace';
+    ctx.fillText('Press R or click restart to play again', cx, cy + lines.length * 22);
+    ctx.textAlign = 'left';
+    // Save personal best stats (once per game over)
+    if (!statsSaved) {
+      statsSaved = true;
+      try {
+        const statsKey = 'galactic_td_stats';
+        let stats = {};
+        try { stats = JSON.parse(localStorage.getItem(statsKey)) || {}; } catch {}
+        stats.totalGames = (stats.totalGames || 0) + 1;
+        if (!stats.bestWave || wave > stats.bestWave) stats.bestWave = wave;
+        if (!stats.bestDiff || diff > stats.bestDiff) stats.bestDiff = diff;
+        stats.totalKills = (stats.totalKills || 0) + runTotalKills;
+        localStorage.setItem(statsKey, JSON.stringify(stats));
+      } catch {}
+    }
   }
 }
 
@@ -1857,7 +2261,7 @@ restartBtn.onclick = () => {
 function saveGame() {
   if (menu.style.display !== 'none' || dead) return;
   const s = {
-    v: 2, wave, money, bank, core, best, sel, st, sw, paused,
+    v: 3, wave, money, bank, core, best, sel, st, sw, paused,
     speedIdx, timeScale, wait, pendingPacks, spawnTick, bossPending, megaPending,
     diff, maxWaves, mapIdx,
     selT, selW,
@@ -1865,15 +2269,21 @@ function saveGame() {
     tx: Array.from(tx.subarray(0, tn)), ty: Array.from(ty.subarray(0, tn)),
     tier: Array.from(tier.subarray(0, tn)), heat: Array.from(heat.subarray(0, tn)),
     cd: Array.from(cd.subarray(0, tn)), thp: Array.from(thp.subarray(0, tn)),
+    tKills: Array.from(tKills.subarray(0, tn)), tDmg: Array.from(tDmg.subarray(0, tn)),
     en, ep: Array.from(ep.subarray(0, en)), et: Array.from(et.subarray(0, en)),
     ec: Array.from(ec.subarray(0, en)), ehu: Array.from(ehu.subarray(0, en)),
     eh: Array.from(eh.subarray(0, en)), es: Array.from(es.subarray(0, en)),
     eb: Array.from(eb.subarray(0, en)), ek: Array.from(ek.subarray(0, en)),
     eboss: Array.from(eboss.subarray(0, en)),
+    eBaseSpd: Array.from(eBaseSpd.subarray(0, en)),
+    eSlow: Array.from(eSlow.subarray(0, en)), eBurn: Array.from(eBurn.subarray(0, en)),
+    eBurnDmg: Array.from(eBurnDmg.subarray(0, en)), eExpose: Array.from(eExpose.subarray(0, en)),
+    eGlitch: Array.from(eGlitch.subarray(0, en)), eShatter: Array.from(eShatter.subarray(0, en)),
     fn, fp: Array.from(fp.subarray(0, fn)), fs: Array.from(fs.subarray(0, fn)),
     fd: Array.from(fd.subarray(0, fn)), fl: Array.from(fl.subarray(0, fn)),
     fcd: Array.from(fcd.subarray(0, fn)), ft: Array.from(ft.subarray(0, fn)),
     fxp: Array.from(fxp.subarray(0, fn)), fyp: Array.from(fyp.subarray(0, fn)),
+    runTotalKills, runTotalDmg, runStartTime,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch {}
 }
@@ -1881,7 +2291,7 @@ function saveGame() {
 function loadGame() {
   let s;
   try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return false; }
-  if (!s || (s.v !== 1 && s.v !== 2)) return false;
+  if (!s || (s.v !== 1 && s.v !== 2 && s.v !== 3)) return false;
   diff = s.diff ?? 2; maxWaves = s.maxWaves ?? 40; mapIdx = s.mapIdx ?? 0;
   selT = s.selT; selW = s.selW; st = s.st; sw = s.sw;
   wave = s.wave; money = s.money; bank = s.bank; core = s.core; best = s.best;
@@ -1893,12 +2303,22 @@ function loadGame() {
     tx[i] = s.tx[i]; ty[i] = s.ty[i]; tt[i] = s.tt[i]; tw[i] = s.tw[i];
     tier[i] = s.tier[i]; heat[i] = s.heat[i]; cd[i] = s.cd[i]; thp[i] = s.thp[i];
     bt[i] = 0;
+    tKills[i] = s.tKills ? s.tKills[i] : 0;
+    tDmg[i] = s.tDmg ? s.tDmg[i] : 0;
+    synBonus[i] = 1;
   }
   en = s.en;
   for (let i = 0; i < en; i++) {
     ep[i] = s.ep[i]; et[i] = s.et[i]; ec[i] = s.ec[i]; ehu[i] = s.ehu[i];
     eh[i] = s.eh[i]; es[i] = s.es[i]; eb[i] = s.eb[i]; ek[i] = s.ek[i];
     eboss[i] = s.eboss[i];
+    eBaseSpd[i] = s.eBaseSpd ? s.eBaseSpd[i] : s.es[i];
+    eSlow[i] = s.eSlow ? s.eSlow[i] : 0;
+    eBurn[i] = s.eBurn ? s.eBurn[i] : 0;
+    eBurnDmg[i] = s.eBurnDmg ? s.eBurnDmg[i] : 0;
+    eExpose[i] = s.eExpose ? s.eExpose[i] : 0;
+    eGlitch[i] = s.eGlitch ? s.eGlitch[i] : 0;
+    eShatter[i] = s.eShatter ? s.eShatter[i] : 0;
     const u = ep[i] * (ps - 1);
     let j = u | 0; let f = u - j;
     if (j >= ps - 1) { j = ps - 2; f = 1; }
@@ -1910,8 +2330,14 @@ function loadGame() {
     fp[i] = s.fp[i]; fs[i] = s.fs[i]; fd[i] = s.fd[i]; fl[i] = s.fl[i]; fcd[i] = s.fcd[i];
     ft[i] = s.ft ? s.ft[i] : 1; fxp[i] = s.fxp ? s.fxp[i] : 0; fyp[i] = s.fyp ? s.fyp[i] : 0;
   }
+  runTotalKills = s.runTotalKills || 0;
+  runTotalDmg = s.runTotalDmg || 0;
+  runStartTime = s.runStartTime || performance.now();
+  pn = 0; pHead = 0;
   setSpeed(s.speedIdx);
   dead = 0;
+  calcSynergies();
+  calcWavePreview();
   localStorage.removeItem(SAVE_KEY);
   return true;
 }
