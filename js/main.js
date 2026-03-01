@@ -181,6 +181,9 @@ let w = 0;
 let h = 0;
 let cx = 0;
 let cy = 0;
+let playTopInset = 0;
+let playBottomInset = 0;
+let playH = 0;
 const ps = 720;
 const px = new Float32Array(ps);
 const py = new Float32Array(ps);
@@ -324,7 +327,7 @@ function mkBoss(boss) {
 }
 
 function mkPath() {
-  const mr = Math.min(w, h) * 0.46;
+  const mr = Math.min(w, playH || h) * 0.46;
   if (mapIdx === 0) {
     const ir = mr * 0.12;
     const tz = 12 * Math.PI;
@@ -670,6 +673,12 @@ function resize() {
   c.width = (w * dpr) | 0;
   c.height = (h * dpr) | 0;
   const panelRect = panel.getBoundingClientRect();
+  const hudRect = $('hud').getBoundingClientRect();
+  playTopInset = Math.max(0, hudRect.bottom + 10);
+  playBottomInset = Math.max(0, h - panelRect.top) + 14;
+  playH = Math.max(220, h - playTopInset - playBottomInset);
+  cx = w * 0.5;
+  cy = playTopInset + playH * 0.5;
   const bottomInset = Math.max(0, h - panelRect.top);
   const playH = h - bottomInset * 0.5;
   cx = w * 0.5;
