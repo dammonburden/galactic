@@ -1022,6 +1022,7 @@ const eExpose = new Float32Array(ME);   // expose timer
 const eGlitch = new Float32Array(ME);   // glitch (stun) timer
 const eShatter = new Uint8Array(ME);    // shatter applied flag
 const eBaseSpd = new Float32Array(ME);  // original speed (before slow)
+const eSplitChild = new Uint8Array(ME); // 1 = spawned by split, cannot re-split
 
 // --- Particle system (Feature 3) ---
 const MP = 2000;
@@ -1053,22 +1054,24 @@ function spawnParticle(x, y, vx, vy, r, g, b, life) {
 }
 
 function spawnHitParticles(x, y, count, r, g, b) {
+  if (timeScale > 5) return;
   for (let j = 0; j < count; j++) {
-    const a = rng() * 6.283;
-    const s = 30 + rng() * 60;
-    spawnParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, r, g, b, 0.3 + rng() * 0.3);
+    const a = Math.random() * 6.283;
+    const s = 30 + Math.random() * 60;
+    spawnParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, r, g, b, 0.3 + Math.random() * 0.3);
   }
 }
 
 function spawnKillBurst(x, y, count, isBoss) {
+  if (timeScale > 5) return;
   const n = isBoss ? count * 3 : count;
   for (let j = 0; j < n; j++) {
-    const a = rng() * 6.283;
-    const s = 40 + rng() * (isBoss ? 120 : 80);
-    const r = isBoss ? 255 : 200 + (rng() * 55) | 0;
-    const g = isBoss ? (100 + rng() * 100) | 0 : (180 + rng() * 75) | 0;
-    const b = isBoss ? (50 + rng() * 50) | 0 : (220 + rng() * 35) | 0;
-    spawnParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, r, g, b, 0.5 + rng() * 0.5);
+    const a = Math.random() * 6.283;
+    const s = 40 + Math.random() * (isBoss ? 120 : 80);
+    const r = isBoss ? 255 : 200 + (Math.random() * 55) | 0;
+    const g = isBoss ? (100 + Math.random() * 100) | 0 : (180 + Math.random() * 75) | 0;
+    const b = isBoss ? (50 + Math.random() * 50) | 0 : (220 + Math.random() * 35) | 0;
+    spawnParticle(x, y, Math.cos(a) * s, Math.sin(a) * s, r, g, b, 0.5 + Math.random() * 0.5);
   }
 }
 
@@ -1288,6 +1291,7 @@ function spawnPack(isBoss) {
   eExpose[i] = 0;
   eGlitch[i] = 0;
   eShatter[i] = 0;
+  eSplitChild[i] = 0;
 }
 
 function spawnWave() {
@@ -1319,7 +1323,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
   if (towerIdx >= 0 && towerIdx < tn) { tDmg[towerIdx] += dm; }
   runTotalDmg += dm;
   // Hit particles
-  spawnHitParticles(ex[i], ey[i], 3 + (rng() * 3) | 0, 180, 240, 255);
+  spawnHitParticles(ex[i], ey[i], 3 + (Math.random() * 3) | 0, 180, 240, 255);
   // Apply status effect from weapon
   if (weaponFx) {
     if (weaponFx === 'expose') eExpose[i] = 2.0;
@@ -1356,7 +1360,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
     eh[i] = 0;
     ec[i] = 0;
     // Enemy ability: split spawns 2 packs on death
-    const shouldSplit = !isBossKill && E[killType].ab === 'split' && en < ME - 4;
+    const shouldSplit = !isBossKill && !eSplitChild[i] && E[killType].ab === 'split' && en < ME - 4;
     en--;
     if (i !== en) {
       ep[i] = ep[en]; ex[i] = ex[en]; ey[i] = ey[en];
@@ -1365,7 +1369,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
       ek[i] = ek[en]; eboss[i] = eboss[en];
       eSlow[i] = eSlow[en]; eBurn[i] = eBurn[en]; eBurnDmg[i] = eBurnDmg[en];
       eExpose[i] = eExpose[en]; eGlitch[i] = eGlitch[en]; eShatter[i] = eShatter[en];
-      eBaseSpd[i] = eBaseSpd[en];
+      eBaseSpd[i] = eBaseSpd[en]; eSplitChild[i] = eSplitChild[en];
     }
     if (shouldSplit) {
       const halfCnt = Math.max(1, (killCount * 0.5) | 0);
@@ -1392,6 +1396,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
         eboss[si] = 0;
         eSlow[si] = 0; eBurn[si] = 0; eBurnDmg[si] = 0;
         eExpose[si] = 0; eGlitch[si] = 0; eShatter[si] = 0;
+        eSplitChild[si] = 1;
       }
     }
     return;
@@ -1638,7 +1643,7 @@ function upd(dt) {
       const burnDm = eBurnDmg[i] * dt;
       eh[i] -= burnDm;
       runTotalDmg += burnDm;
-      if (eBurn[i] > 0 && Math.random() < dt * 3) spawnParticle(ex[i] + (Math.random()-0.5)*6, ey[i], (Math.random()-0.5)*15, -20 - Math.random()*30, 255, 140 + (Math.random()*60)|0, 30, 0.4);
+      if (timeScale <= 5 && eBurn[i] > 0 && Math.random() < dt * 3) spawnParticle(ex[i] + (Math.random()-0.5)*6, ey[i], (Math.random()-0.5)*15, -20 - Math.random()*30, 255, 140 + (Math.random()*60)|0, 30, 0.4);
       if (eh[i] <= 0) {
         money = toInt(money + ec[i] * eb[i]);
         runTotalKills += ec[i];
@@ -1649,7 +1654,7 @@ function upd(dt) {
           eh[i]=eh[en];es[i]=es[en];eb[i]=eb[en];ek[i]=ek[en];eboss[i]=eboss[en];
           eSlow[i]=eSlow[en];eBurn[i]=eBurn[en];eBurnDmg[i]=eBurnDmg[en];
           eExpose[i]=eExpose[en];eGlitch[i]=eGlitch[en];eShatter[i]=eShatter[en];
-          eBaseSpd[i]=eBaseSpd[en];
+          eBaseSpd[i]=eBaseSpd[en];eSplitChild[i]=eSplitChild[en];
         }
         continue;
       }
@@ -1668,7 +1673,7 @@ function upd(dt) {
         eh[i]=eh[en];es[i]=es[en];eb[i]=eb[en];ek[i]=ek[en];eboss[i]=eboss[en];
         eSlow[i]=eSlow[en];eBurn[i]=eBurn[en];eBurnDmg[i]=eBurnDmg[en];
         eExpose[i]=eExpose[en];eGlitch[i]=eGlitch[en];eShatter[i]=eShatter[en];
-        eBaseSpd[i]=eBaseSpd[en];
+        eBaseSpd[i]=eBaseSpd[en];eSplitChild[i]=eSplitChild[en];
       }
       continue;
     }
@@ -1813,14 +1818,16 @@ function upd(dt) {
       i++;
     }
   }
-  // Update particles
-  for (let i = 0; i < MP; i++) {
-    if (partLife[i] <= 0) continue;
-    partLife[i] -= dt;
-    partX[i] += partVX[i] * dt;
-    partY[i] += partVY[i] * dt;
-    partVX[i] *= 0.96;
-    partVY[i] *= 0.96;
+  // Update particles (skip at high speed)
+  if (timeScale <= 5) {
+    for (let i = 0; i < MP; i++) {
+      if (partLife[i] <= 0) continue;
+      partLife[i] -= dt;
+      partX[i] += partVX[i] * dt;
+      partY[i] += partVY[i] * dt;
+      partVX[i] *= 0.96;
+      partVY[i] *= 0.96;
+    }
   }
   if (en === 0 && wait <= 0 && !dead) {
     updBest();
@@ -1885,21 +1892,23 @@ function draw() {
     ctx.fillStyle = eboss[i] ? 'rgba(255,190,100,.9)' : 'rgba(255,120,120,.9)';
     ctx.fillRect(ex[i] - barW * 0.5, barY, barW * p, 5);
     ctx.globalAlpha = 1;
-    // Status effect indicators
-    let fxY = barY - 6;
-    if (eSlow[i] > 0) { ctx.fillStyle = 'rgba(100,180,255,.8)'; ctx.fillRect(ex[i] - 6, fxY, 4, 4); fxY -= 5; }
-    if (eBurn[i] > 0) { ctx.fillStyle = 'rgba(255,120,40,.8)'; ctx.fillRect(ex[i] - 1, fxY, 4, 4); fxY -= 5; }
-    if (eExpose[i] > 0) { ctx.fillStyle = 'rgba(255,255,100,.8)'; ctx.fillRect(ex[i] + 4, fxY, 4, 4); fxY -= 5; }
-    if (eGlitch[i] > 0) { ctx.fillStyle = 'rgba(200,100,255,.8)'; ctx.fillRect(ex[i] - 4, fxY, 4, 4); }
-    // Ability indicator
-    const ab = eboss[i] ? '' : E[et[i]].ab;
-    if (ab) {
-      ctx.globalAlpha = 0.6;
-      ctx.font = '8px monospace';
-      ctx.fillStyle = ab === 'armor' ? '#aaa' : ab === 'phase' ? '#aef' : ab === 'cloak' ? '#caf' : '#fc8';
-      ctx.textAlign = 'center';
-      ctx.fillText(ab === 'armor' ? 'A' : ab === 'phase' ? 'P' : ab === 'cloak' ? 'C' : 'S', ex[i], ey[i] + size * 0.5 + 10);
-      ctx.globalAlpha = 1;
+    if (timeScale <= 5) {
+      // Status effect indicators
+      let fxY = barY - 6;
+      if (eSlow[i] > 0) { ctx.fillStyle = 'rgba(100,180,255,.8)'; ctx.fillRect(ex[i] - 6, fxY, 4, 4); fxY -= 5; }
+      if (eBurn[i] > 0) { ctx.fillStyle = 'rgba(255,120,40,.8)'; ctx.fillRect(ex[i] - 1, fxY, 4, 4); fxY -= 5; }
+      if (eExpose[i] > 0) { ctx.fillStyle = 'rgba(255,255,100,.8)'; ctx.fillRect(ex[i] + 4, fxY, 4, 4); fxY -= 5; }
+      if (eGlitch[i] > 0) { ctx.fillStyle = 'rgba(200,100,255,.8)'; ctx.fillRect(ex[i] - 4, fxY, 4, 4); }
+      // Ability indicator
+      const ab = eboss[i] ? '' : E[et[i]].ab;
+      if (ab) {
+        ctx.globalAlpha = 0.6;
+        ctx.font = '8px monospace';
+        ctx.fillStyle = ab === 'armor' ? '#aaa' : ab === 'phase' ? '#aef' : ab === 'cloak' ? '#caf' : '#fc8';
+        ctx.textAlign = 'center';
+        ctx.fillText(ab === 'armor' ? 'A' : ab === 'phase' ? 'P' : ab === 'cloak' ? 'C' : 'S', ex[i], ey[i] + size * 0.5 + 10);
+        ctx.globalAlpha = 1;
+      }
     }
   }
   // Draw friendly units
@@ -1942,23 +1951,25 @@ function draw() {
     ctx.globalAlpha = 0.98;
     ctx.drawImage(wSpr[we], x - s2 * 0.5, y - s2 * 0.5, s2, s2);
     ctx.globalAlpha = 1;
-    // Synergy indicator
-    if (synBonus[i] > 1.01) {
-      ctx.globalAlpha = 0.3;
-      ctx.strokeStyle = 'rgba(180,255,180,.6)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(x, y, sz * 0.5 + 7, 0, 6.283);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    } else if (synBonus[i] < 0.99) {
-      ctx.globalAlpha = 0.2;
-      ctx.strokeStyle = 'rgba(255,180,180,.5)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.arc(x, y, sz * 0.5 + 7, 0, 6.283);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
+    // Synergy indicator (skip at high speed)
+    if (timeScale <= 5) {
+      if (synBonus[i] > 1.01) {
+        ctx.globalAlpha = 0.3;
+        ctx.strokeStyle = 'rgba(180,255,180,.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, sz * 0.5 + 7, 0, 6.283);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (synBonus[i] < 0.99) {
+        ctx.globalAlpha = 0.2;
+        ctx.strokeStyle = 'rgba(255,180,180,.5)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(x, y, sz * 0.5 + 7, 0, 6.283);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
     }
     if (bt[i] > 0) {
       ctx.globalAlpha = Math.min(1, bt[i] * 10);
@@ -1978,17 +1989,19 @@ function draw() {
       ctx.stroke();
     }
   }
-  // Draw particles
-  for (let i = 0; i < MP; i++) {
-    if (partLife[i] <= 0) continue;
-    const a = Math.min(1, partLife[i] / partMaxLife[i]);
-    ctx.globalAlpha = a * 0.9;
-    ctx.fillStyle = `rgb(${partR[i]},${partG[i]},${partB[i]})`;
-    ctx.beginPath();
-    ctx.arc(partX[i], partY[i], 1.5 + a * 1.5, 0, 6.283);
-    ctx.fill();
+  // Draw particles (skip at high speed)
+  if (timeScale <= 5) {
+    for (let i = 0; i < MP; i++) {
+      if (partLife[i] <= 0) continue;
+      const a = Math.min(1, partLife[i] / partMaxLife[i]);
+      ctx.globalAlpha = a * 0.9;
+      ctx.fillStyle = `rgb(${partR[i]},${partG[i]},${partB[i]})`;
+      ctx.beginPath();
+      ctx.arc(partX[i], partY[i], 1.5 + a * 1.5, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
-  ctx.globalAlpha = 1;
   // Draw wave preview (between waves)
   if (menu.style.display === 'none' && !dead && (wait > 0 || (en === 0 && pendingPacks === 0))) {
     const prevX = w - 10;
@@ -2279,6 +2292,7 @@ function saveGame() {
     eSlow: Array.from(eSlow.subarray(0, en)), eBurn: Array.from(eBurn.subarray(0, en)),
     eBurnDmg: Array.from(eBurnDmg.subarray(0, en)), eExpose: Array.from(eExpose.subarray(0, en)),
     eGlitch: Array.from(eGlitch.subarray(0, en)), eShatter: Array.from(eShatter.subarray(0, en)),
+    eSplitChild: Array.from(eSplitChild.subarray(0, en)),
     fn, fp: Array.from(fp.subarray(0, fn)), fs: Array.from(fs.subarray(0, fn)),
     fd: Array.from(fd.subarray(0, fn)), fl: Array.from(fl.subarray(0, fn)),
     fcd: Array.from(fcd.subarray(0, fn)), ft: Array.from(ft.subarray(0, fn)),
@@ -2319,6 +2333,7 @@ function loadGame() {
     eExpose[i] = s.eExpose ? s.eExpose[i] : 0;
     eGlitch[i] = s.eGlitch ? s.eGlitch[i] : 0;
     eShatter[i] = s.eShatter ? s.eShatter[i] : 0;
+    eSplitChild[i] = s.eSplitChild ? s.eSplitChild[i] : 0;
     const u = ep[i] * (ps - 1);
     let j = u | 0; let f = u - j;
     if (j >= ps - 1) { j = ps - 2; f = 1; }
