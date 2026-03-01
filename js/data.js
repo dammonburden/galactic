@@ -24,6 +24,8 @@ export const WEAPONS = [
   { n: 'Graviton Beam', i: '🪢', c: 90, d: 14, f: 8.0, r: 208, ao: 0.18, ch: 1, h: 0.92, fx: 'slow' },
   { n: 'Antimatter Mine', i: '☢️', c: 95, d: 74, f: 1.65, r: 152, ao: 0.66, ch: 0, h: 1.2, fx: 'shatter' },
   { n: 'Singularity Driver', i: '🌀', c: 105, d: 12, f: 7.2, r: 200, ao: 0.46, ch: 0, h: 1.02, fx: 'vortex' },
+  { n: 'Temporal Rift', i: '⏳', c: 92, d: 8, f: 9.4, r: 204, ao: 0.34, ch: 0, h: 0.88, fx: 'entropy' },
+  { n: 'Leech Swarm', i: '🩸', c: 98, d: 32, f: 3.4, r: 174, ao: 0.08, ch: 3, h: 1.08, fx: 'siphon' },
 ];
 
 export const ENEMIES = [
@@ -64,4 +66,5 @@ export const DIFFICULTIES = [
   { n: 'Expert', waves: 185, hpMul: 1.7, spdMul: 1.22, money: 190, coreDmgMul: 1.6, desc: 'Only veterans survive' },
   { n: 'Impossible', waves: 220, hpMul: 2.4, spdMul: 1.45, money: 150, coreDmgMul: 2.1, desc: 'Practically unwinnable' },
   { n: 'Cataclysm', waves: 300, hpMul: 4.0, spdMul: 1.8, money: 110, coreDmgMul: 3.5, desc: 'Absolute annihilation' },
+  { n: 'Oblivion', waves: 5000, hpMul: 6.5, spdMul: 2.2, money: 80, coreDmgMul: 5.0, desc: 'Beyond all reason — eternal war' },
 ];
