@@ -679,6 +679,10 @@ function resize() {
   playH = Math.max(220, h - playTopInset - playBottomInset);
   cx = w * 0.5;
   cy = playTopInset + playH * 0.5;
+  const bottomInset = Math.max(0, h - panelRect.top);
+  const playH = h - bottomInset * 0.5;
+  cx = w * 0.5;
+  cy = playH * 0.52;
   mkPath();
   mkBg();
   initDynBg();

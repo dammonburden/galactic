@@ -58,10 +58,10 @@ export const MEGA_BOSS = {
 };
 
 export const DIFFICULTIES = [
-  { n: 'Easy', waves: 40, hpMul: 0.6, spdMul: 0.8, money: 340, coreDmgMul: 0.55, desc: 'Relaxed — anyone can beat it' },
-  { n: 'Intermediate', waves: 80, hpMul: 0.85, spdMul: 0.92, money: 280, coreDmgMul: 0.8, desc: 'A fair challenge' },
-  { n: 'Hard', waves: 120, hpMul: 1.0, spdMul: 1.0, money: 240, coreDmgMul: 1.0, desc: 'Requires experience' },
-  { n: 'Expert', waves: 160, hpMul: 1.4, spdMul: 1.15, money: 190, coreDmgMul: 1.35, desc: 'Only pros survive' },
+  { n: 'Easy', waves: 60, hpMul: 0.6, spdMul: 0.8, money: 340, coreDmgMul: 0.55, desc: 'Relaxed — anyone can beat it' },
+  { n: 'Intermediate', waves: 100, hpMul: 0.85, spdMul: 0.92, money: 280, coreDmgMul: 0.8, desc: 'A fair challenge' },
+  { n: 'Hard', waves: 140, hpMul: 1.0, spdMul: 1.0, money: 240, coreDmgMul: 1.0, desc: 'Requires experience' },
+  { n: 'Expert', waves: 170, hpMul: 1.4, spdMul: 1.15, money: 190, coreDmgMul: 1.35, desc: 'Only pros survive' },
   { n: 'Impossible', waves: 200, hpMul: 2.0, spdMul: 1.35, money: 150, coreDmgMul: 1.85, desc: 'Near-certain death' },
   { n: 'Cataclysm', waves: 240, hpMul: 2.6, spdMul: 1.5, money: 110, coreDmgMul: 2.25, desc: 'Beyond impossible' },
 ];
