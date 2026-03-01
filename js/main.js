@@ -1224,7 +1224,7 @@ function calcWavePreview() {
   const counts = new Array(E.length).fill(0);
   const base = w < 2 ? gs.waveBudgetBase : Math.min(gs.waveBudgetMax, gs.waveBudgetBase + w * gs.waveBudgetScale);
   for (let p = 0; p < packs; p++) {
-    const k = (rng() * E.length) | 0;
+    const k = (Math.random() * E.length) | 0;
     const cnt = Math.max(1, (base * E[k].c * 0.95) | 0);
     counts[k] += cnt;
   }
@@ -1346,6 +1346,8 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
     const killX = ex[i];
     const killY = ey[i];
     const killType = et[i];
+    const killProg = ep[i];
+    const killSpd = eBaseSpd[i];
     money = toInt(money + killBounty);
     if (towerIdx >= 0 && towerIdx < tn) tKills[towerIdx] += killCount;
     runTotalKills += killCount;
@@ -1367,7 +1369,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
     }
     if (shouldSplit) {
       const halfCnt = Math.max(1, (killCount * 0.5) | 0);
-      const splitProg = Math.min(0.95, (killX - px[0]) !== 0 ? ep[i > en ? en : i] || 0.5 : 0.5);
+      const splitProg = Math.min(0.95, killProg || 0.5);
       for (let s = 0; s < 2; s++) {
         if (en >= ME - 1) break;
         const si = en++;
@@ -1383,7 +1385,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
         const splitHpU = (1.8 + wave * 0.16) * E[killType].hp * 0.5 * dif.hpMul;
         ehu[si] = splitHpU;
         eh[si] = splitHpU * halfCnt;
-        eBaseSpd[si] = eBaseSpd[i > en ? en : 0] || 0.03;
+        eBaseSpd[si] = killSpd || 0.03;
         es[si] = eBaseSpd[si] * 1.1;
         eb[si] = 0;
         ek[si] = E[killType].core;
@@ -1466,6 +1468,7 @@ function sell(i) {
     if (sel === tn) sel = i;
   }
   if (sel === i) sel = -1;
+  calcSynergies();
   mkBar();
 }
 
@@ -1635,7 +1638,7 @@ function upd(dt) {
       const burnDm = eBurnDmg[i] * dt;
       eh[i] -= burnDm;
       runTotalDmg += burnDm;
-      if (eBurn[i] > 0 && rng() < dt * 3) spawnParticle(ex[i] + (rng()-0.5)*6, ey[i], (rng()-0.5)*15, -20 - rng()*30, 255, 140 + (rng()*60)|0, 30, 0.4);
+      if (eBurn[i] > 0 && Math.random() < dt * 3) spawnParticle(ex[i] + (Math.random()-0.5)*6, ey[i], (Math.random()-0.5)*15, -20 - Math.random()*30, 255, 140 + (Math.random()*60)|0, 30, 0.4);
       if (eh[i] <= 0) {
         money = toInt(money + ec[i] * eb[i]);
         runTotalKills += ec[i];
