@@ -7,18 +7,18 @@
 #note{position:fixed;left:50%;top:60px;transform:translateX(-50%);padding:8px 12px;border-radius:999px;border:1px solid color-mix(in oklab,#8cf 24%,#000);background:color-mix(in oklab,#0b1020 82%,transparent);backdrop-filter:blur(10px) saturate(1.2);font-size:11px;letter-spacing:.3px;opacity:0;transition:.2s opacity, .2s transform;pointer-events:none;z-index:3}
 #note.show{opacity:1;transform:translate(-50%,0)}
 .slot{display:flex;gap:6px;align-items:center}
-.slot button{width:38px;height:38px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s transform,.12s border-color,.12s background}
-.slot button:hover{transform:translateY(-1px)}.slot button.on{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
+.slot button{width:38px;height:38px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s border-color,.12s background}
+.slot button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}.slot button.on{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
 .pgroup{display:flex;flex-direction:column;align-items:center;gap:3px}
 .plabel{font-size:9px;letter-spacing:1.2px;opacity:.55;text-transform:uppercase;font-weight:700}
 .pdiv{width:1px;height:28px;background:color-mix(in oklab,#8cf 14%,#000);flex-shrink:0}
 .pcontrols{display:flex;gap:6px;align-items:center}
-.pcontrols button{width:40px;height:40px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;font-size:16px;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s transform,.12s border-color,.12s background}
-.pcontrols button:hover{transform:translateY(-1px);border-color:#bff}
+.pcontrols button{width:40px;height:40px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#0b1020 70%,#000);color:#dff;font-size:16px;display:grid;place-items:center;cursor:pointer;touch-action:manipulation;transition:.12s border-color,.12s background}
+.pcontrols button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}
 .pactions{display:flex;gap:10px;align-items:center}
 #pauseBtn.playing{background:color-mix(in oklab,#1a3860 78%,#000);border-color:#8cf}
-#up{padding:14px 22px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;font-size:14px;letter-spacing:.4px;touch-action:manipulation;transition:.12s transform,.12s filter}
-#up:hover{transform:translateY(-1px);filter:saturate(1.1)}#up:disabled{opacity:.35;cursor:not-allowed;transform:none;filter:none}
+#up{padding:14px 22px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;font-size:14px;letter-spacing:.4px;touch-action:manipulation;transition:.12s filter}
+#up:hover{filter:saturate(1.1) brightness(1.12)}#up:disabled{opacity:.35;cursor:not-allowed;filter:none}
 #hint{font-size:11px;opacity:0;visibility:hidden;max-width:88ch;line-height:1.2;white-space:normal;overflow:visible;text-overflow:clip;flex:1 1 240px;text-align:center;transition:opacity .15s ease,visibility .15s ease}
 #panel:hover #hint,#panel:focus-within #hint{opacity:.84;visibility:visible}
 #tip{position:fixed;z-index:9;pointer-events:none;opacity:0;transform:translate3d(0,0,0);padding:8px 10px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 22%,#000);background:color-mix(in oklab,#071022 88%,#000);backdrop-filter:blur(10px) saturate(1.2);font-size:11px;line-height:1.22;white-space:pre-line}
@@ -29,16 +29,16 @@
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .col h2{margin:8px 0 6px;font-size:12px;letter-spacing:1.1px;text-transform:uppercase;display:flex;justify-content:space-between;opacity:.9}
 .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
-.grid button{display:flex;flex-direction:column;gap:4px;padding:8px 8px 6px;border-radius:14px;border:1px solid color-mix(in oklab,#8cf 20%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;user-select:none;transition:.12s transform,.12s border-color,.12s background;overflow:hidden;min-width:0}
-.grid button:hover{transform:translateY(-1px)}.grid button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
+.grid button{display:flex;flex-direction:column;gap:4px;padding:8px 8px 6px;border-radius:14px;border:1px solid color-mix(in oklab,#8cf 20%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;user-select:none;transition:.12s border-color,.12s background;overflow:hidden;min-width:0}
+.grid button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}.grid button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
 .grid button span{font-size:18px}.grid button b{font-size:11px;font-weight:850;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%}.grid button i{font-style:normal;font-size:10px;opacity:.75}
 .row{display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap}
-.row button{padding:10px 14px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;letter-spacing:.3px;transition:.12s transform,.12s filter}
-.row button:hover{transform:translateY(-1px);filter:saturate(1.1)}.row button:disabled{opacity:.35;cursor:not-allowed;transform:none;filter:none}
+.row button{padding:10px 14px;border-radius:14px;border:1px solid var(--bd);background:linear-gradient(180deg,color-mix(in oklab,#16284f 92%,#000),color-mix(in oklab,#091023 92%,#000));color:#eaf6ff;cursor:pointer;font-weight:900;letter-spacing:.3px;transition:.12s filter}
+.row button:hover{filter:saturate(1.1) brightness(1.12)}.row button:disabled{opacity:.35;cursor:not-allowed;filter:none}
 .small{margin-top:10px;font-size:11px;opacity:.82;line-height:1.25}
 .diff-row{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.diff-row button{padding:7px 12px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 20%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.3px;transition:.12s transform,.12s border-color,.12s background}
-.diff-row button:hover{transform:translateY(-1px)}.diff-row button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
+.diff-row button{padding:7px 12px;border-radius:12px;border:1px solid color-mix(in oklab,#8cf 20%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.3px;transition:.12s border-color,.12s background}
+.diff-row button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}.diff-row button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
 .diff-row button small{display:block;font-weight:400;opacity:.7;font-size:9px;margin-top:2px}
 @media (max-width:900px){.cols{grid-template-columns:1fr}.grid{grid-template-columns:repeat(4,1fr)}}
 @media (max-width:480px){.grid{grid-template-columns:repeat(3,1fr)}.grid button b{font-size:10px}.grid button i{font-size:9px}.grid button{padding:6px 4px 4px}}
@@ -56,6 +56,29 @@
 #hud{gap:6px;padding:8px 10px}.k{min-width:62px}.k b{font-size:15px}.k span{font-size:9px}
 }
 @media (hover:none){#hint{opacity:.84;visibility:visible}}
+#adminTrigger{text-align:center;margin-top:16px;cursor:pointer;opacity:.10;font-size:11px;letter-spacing:1px;user-select:none}
+#adminTrigger:hover{opacity:.25}
+#adminModal{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in oklab,#000 78%,transparent);backdrop-filter:blur(12px) saturate(1.25);z-index:5}
+.admin-card{width:min(860px,94vw);max-height:88vh;display:flex;flex-direction:column;padding:16px 18px;border-radius:18px;border:1px solid var(--bd);background:color-mix(in oklab,#071022 94%,#000);box-shadow:0 30px 120px #0008;overflow:hidden}
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.admin-header h2{margin:0;font-size:16px;letter-spacing:.5px}
+.admin-actions{display:flex;gap:8px}
+.admin-actions button{padding:7px 14px;border-radius:10px;border:1px solid var(--bd);background:color-mix(in oklab,#0b1020 70%,#000);color:#eaf6ff;cursor:pointer;font-weight:700;font-size:11px;letter-spacing:.3px;transition:.12s border-color,.12s background}
+.admin-actions button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}
+.admin-tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+.admin-tabs button{padding:6px 12px;border-radius:10px;border:1px solid color-mix(in oklab,#8cf 18%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.3px;transition:.12s border-color,.12s background}
+.admin-tabs button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}
+.admin-tabs button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
+.admin-body{overflow-y:auto;flex:1;min-height:0}
+.admin-section{margin-bottom:14px}
+.admin-section h3{margin:0 0 6px;font-size:12px;letter-spacing:.8px;text-transform:uppercase;opacity:.85}
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px 12px}
+.admin-field{display:flex;flex-direction:column;gap:2px;padding:6px 8px;border-radius:8px;background:color-mix(in oklab,#0b1020 50%,#000);border:1px solid transparent}
+.admin-field.modified{border-color:color-mix(in oklab,#8cf 30%,#000)}
+.admin-field label{font-size:10px;letter-spacing:.6px;opacity:.7;text-transform:uppercase;font-weight:600}
+.admin-field .admin-default{font-size:9px;opacity:.45;margin-top:1px}
+.admin-field input{width:100%;padding:4px 6px;border-radius:6px;border:1px solid color-mix(in oklab,#8cf 16%,#000);background:color-mix(in oklab,#071022 80%,#000);color:#eaf6ff;font-size:12px;font-family:inherit;outline:none}
+.admin-field input:focus{border-color:#bff}
 </style></head><body>
 <canvas id=c></canvas>
 
@@ -98,6 +121,13 @@
   </div>
   <div class=row><button id=start disabled>Start</button><button id=rand>Random</button><button id=preset>Preset</button></div>
   <div class=small>Controls: click empty space to place. Click tower to select. Upgrade button or U upgrades selected tower. Right click tower to sell. Q/E cycle chassis. 1-3 select weapon. [ / ] or - / + to change speed. Space or ⏸ button to pause. ↺ button or R to restart.</div>
+  <div id=adminTrigger>Admin Panel</div>
+</div></div>
+
+<div id=adminModal style="display:none"><div class=admin-card>
+  <div class=admin-header><h2>Admin Panel</h2><div class=admin-actions><button id=adminReset>Reset to Default</button><button id=adminSave>Save &amp; Close</button></div></div>
+  <div class=admin-tabs id=adminTabs></div>
+  <div class=admin-body id=adminBody></div>
 </div></div>
 
 <script type=module src="./js/main.js"></script>
