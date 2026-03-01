@@ -231,15 +231,21 @@ function renderAdminTabs() {
   ).join('');
 }
 
+function adminDesc(text) {
+  return `<p style="margin:0 0 12px;font-size:11px;opacity:.6;line-height:1.35;color:#d0b0e0">${text}</p>`;
+}
+
 function renderAdminBody() {
   let html = '';
   if (adminTab === 'settings') {
+    html += adminDesc('Core game parameters — economy, wave pacing, upgrade costs, and placement rules.');
     html += '<div class=admin-section><h3>Game Settings</h3><div class=admin-grid>';
     Object.keys(GS_DEFAULTS).forEach(k => {
       html += adminFieldHtml(`gs.${k}`, GS_LABELS[k] || k, gs[k], GS_DEFAULTS[k]);
     });
     html += '</div></div>';
   } else if (adminTab === 'towers') {
+    html += adminDesc('Adjust chassis stats — cost, range, range scaling per upgrade, and base fire rate.');
     T.forEach((t, i) => {
       const orig = TOWERS[i];
       html += `<div class=admin-section><h3>${orig.i} ${orig.n}</h3><div class=admin-grid>`;
@@ -249,6 +255,7 @@ function renderAdminBody() {
       html += '</div></div>';
     });
   } else if (adminTab === 'weapons') {
+    html += adminDesc('Tune weapon damage, fire rate, range, AoE radius, chain count, and heat penalty.');
     W.forEach((w, i) => {
       const orig = WEAPONS[i];
       html += `<div class=admin-section><h3>${orig.i} ${orig.n}</h3><div class=admin-grid>`;
@@ -258,6 +265,7 @@ function renderAdminBody() {
       html += '</div></div>';
     });
   } else if (adminTab === 'enemies') {
+    html += adminDesc('Modify base enemy stats — HP, speed, spawn count, bounty reward, and core damage.');
     E.forEach((e, i) => {
       const orig = ENEMIES[i];
       html += `<div class=admin-section><h3>${orig.i} ${orig.n}</h3><div class=admin-grid>`;
@@ -267,6 +275,7 @@ function renderAdminBody() {
       html += '</div></div>';
     });
   } else if (adminTab === 'bosses') {
+    html += adminDesc('Configure boss encounters — the Worldbreaker spawns periodically, the Abyss Titan is the ultimate threat.');
     html += `<div class=admin-section><h3>${BOSS.i} ${BOSS.n} (Boss)</h3><div class=admin-grid>`;
     ENEMY_FIELDS.forEach(f => {
       html += adminFieldHtml(`b.${f}`, ENEMY_LABELS[f], B[f], BOSS[f]);
@@ -278,6 +287,7 @@ function renderAdminBody() {
     });
     html += '</div></div>';
   } else if (adminTab === 'difficulties') {
+    html += adminDesc('Set per-difficulty wave count, enemy HP / speed multipliers, starting credits, and core damage scaling.');
     DIFF.forEach((d, i) => {
       const orig = DIFFICULTIES[i];
       html += `<div class=admin-section><h3>${orig.n}</h3><div class=admin-grid>`;
