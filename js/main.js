@@ -66,9 +66,295 @@ const MAPS = [
   { n: 'Comet', desc: 'Tail-heavy slingshot' },
 ];
 
-const T = TOWERS;
-const W = WEAPONS;
-const E = ENEMIES;
+let T = TOWERS.map(t => ({...t}));
+let W = WEAPONS.map(w => ({...w}));
+let E = ENEMIES.map(e => ({...e}));
+let B = {...BOSS};
+let MB = {...MEGA_BOSS};
+let DIFF = DIFFICULTIES.map(d => ({...d}));
+
+const GS_DEFAULTS = {
+  startingCore: 50,
+  bankInterest: 1.2,
+  waveBudgetBase: 16,
+  waveBudgetScale: 3.2,
+  waveBudgetMax: 240,
+  waveBonus: 15,
+  waveBonusScale: 8,
+  bossEvery: 5,
+  megaBossEvery: 10,
+  sellRefundMul: 0.62,
+  weaponCostMul: 0.72,
+  upgBaseMul: 0.58,
+  upgScaleMul: 0.62,
+  upgWaveScale: 0.03,
+  antiMonoFactor: 0.18,
+  maxTier: 100,
+  towerMinDist: 900,
+  waitTime: 1.6,
+  initialWait: 1.4,
+};
+
+let gs = {...GS_DEFAULTS};
+
+const ADMIN_KEY = 'galactic_td_admin';
+
+const GS_LABELS = {
+  startingCore: 'Starting Core HP',
+  bankInterest: 'Bank Interest Multiplier',
+  waveBudgetBase: 'Wave Budget Base',
+  waveBudgetScale: 'Wave Budget Scaling',
+  waveBudgetMax: 'Wave Budget Max',
+  waveBonus: 'Wave Clear Bonus Base',
+  waveBonusScale: 'Wave Clear Bonus Scaling',
+  bossEvery: 'Boss Every N Waves',
+  megaBossEvery: 'Mega Boss Every N Waves',
+  sellRefundMul: 'Sell Refund Multiplier',
+  weaponCostMul: 'Weapon Cost Factor',
+  upgBaseMul: 'Upgrade Cost Base Mul',
+  upgScaleMul: 'Upgrade Cost Scale Mul',
+  upgWaveScale: 'Upgrade Cost Wave Scale',
+  antiMonoFactor: 'Anti-Monoculture Factor',
+  maxTier: 'Max Tower Tier',
+  towerMinDist: 'Tower Min Distance (sq)',
+  waitTime: 'Wave Wait Time (s)',
+  initialWait: 'Initial Wait Time (s)',
+};
+
+const TOWER_FIELDS = ['c', 'r', 'rm', 'fr'];
+const TOWER_LABELS = { c: 'Cost', r: 'Range', rm: 'Range Mul', fr: 'Fire Rate' };
+const WEAPON_FIELDS = ['c', 'd', 'f', 'r', 'ao', 'ch', 'h'];
+const WEAPON_LABELS = { c: 'Cost', d: 'Damage', f: 'Fire Rate', r: 'Range', ao: 'AoE', ch: 'Chain', h: 'Heat' };
+const ENEMY_FIELDS = ['hp', 'sp', 'c', 'b', 'core'];
+const ENEMY_LABELS = { hp: 'HP', sp: 'Speed', c: 'Count', b: 'Bounty', core: 'Core Dmg' };
+const DIFF_FIELDS = ['waves', 'hpMul', 'spdMul', 'money', 'coreDmgMul'];
+const DIFF_LABELS = { waves: 'Waves', hpMul: 'HP Mul', spdMul: 'Speed Mul', money: 'Start Money', coreDmgMul: 'Core Dmg Mul' };
+
+function loadAdmin() {
+  let saved;
+  try { saved = JSON.parse(localStorage.getItem(ADMIN_KEY)); } catch { return; }
+  if (!saved) return;
+  if (saved.towers) saved.towers.forEach((o, i) => { if (i < T.length) Object.assign(T[i], o); });
+  if (saved.weapons) saved.weapons.forEach((o, i) => { if (i < W.length) Object.assign(W[i], o); });
+  if (saved.enemies) saved.enemies.forEach((o, i) => { if (i < E.length) Object.assign(E[i], o); });
+  if (saved.boss) Object.assign(B, saved.boss);
+  if (saved.megaBoss) Object.assign(MB, saved.megaBoss);
+  if (saved.difficulties) saved.difficulties.forEach((o, i) => { if (i < DIFF.length) Object.assign(DIFF[i], o); });
+  if (saved.gs) Object.assign(gs, saved.gs);
+}
+
+function saveAdmin() {
+  const towerOverrides = T.map((t, i) => {
+    const d = {}; const orig = TOWERS[i];
+    TOWER_FIELDS.forEach(f => { if (t[f] !== orig[f]) d[f] = t[f]; });
+    return Object.keys(d).length ? d : null;
+  });
+  const weaponOverrides = W.map((w, i) => {
+    const d = {}; const orig = WEAPONS[i];
+    WEAPON_FIELDS.forEach(f => { if (w[f] !== orig[f]) d[f] = w[f]; });
+    return Object.keys(d).length ? d : null;
+  });
+  const enemyOverrides = E.map((e, i) => {
+    const d = {}; const orig = ENEMIES[i];
+    ENEMY_FIELDS.forEach(f => { if (e[f] !== orig[f]) d[f] = e[f]; });
+    return Object.keys(d).length ? d : null;
+  });
+  const bossOverrides = {};
+  ENEMY_FIELDS.forEach(f => { if (B[f] !== BOSS[f]) bossOverrides[f] = B[f]; });
+  const megaOverrides = {};
+  ENEMY_FIELDS.forEach(f => { if (MB[f] !== MEGA_BOSS[f]) megaOverrides[f] = MB[f]; });
+  const diffOverrides = DIFF.map((d, i) => {
+    const o = {}; const orig = DIFFICULTIES[i];
+    DIFF_FIELDS.forEach(f => { if (d[f] !== orig[f]) o[f] = d[f]; });
+    return Object.keys(o).length ? o : null;
+  });
+  const gsOverrides = {};
+  Object.keys(GS_DEFAULTS).forEach(k => { if (gs[k] !== GS_DEFAULTS[k]) gsOverrides[k] = gs[k]; });
+
+  const hasAny = towerOverrides.some(Boolean) || weaponOverrides.some(Boolean) ||
+    enemyOverrides.some(Boolean) || Object.keys(bossOverrides).length ||
+    Object.keys(megaOverrides).length || diffOverrides.some(Boolean) || Object.keys(gsOverrides).length;
+
+  if (!hasAny) { try { localStorage.removeItem(ADMIN_KEY); } catch {} return; }
+
+  try {
+    localStorage.setItem(ADMIN_KEY, JSON.stringify({
+      towers: towerOverrides,
+      weapons: weaponOverrides,
+      enemies: enemyOverrides,
+      boss: Object.keys(bossOverrides).length ? bossOverrides : null,
+      megaBoss: Object.keys(megaOverrides).length ? megaOverrides : null,
+      difficulties: diffOverrides,
+      gs: Object.keys(gsOverrides).length ? gsOverrides : null,
+    }));
+  } catch {}
+}
+
+function resetAdmin() {
+  try { localStorage.removeItem(ADMIN_KEY); } catch {}
+  T = TOWERS.map(t => ({...t}));
+  W = WEAPONS.map(w => ({...w}));
+  E = ENEMIES.map(e => ({...e}));
+  B = {...BOSS};
+  MB = {...MEGA_BOSS};
+  DIFF = DIFFICULTIES.map(d => ({...d}));
+  gs = {...GS_DEFAULTS};
+}
+
+const adminModal = $('adminModal');
+const adminTabs = $('adminTabs');
+const adminBody = $('adminBody');
+const adminTrigger = $('adminTrigger');
+const adminReset = $('adminReset');
+const adminSave = $('adminSave');
+
+let adminTab = 'settings';
+
+const ADMIN_TAB_LIST = [
+  { id: 'settings', label: 'Game Settings' },
+  { id: 'towers', label: 'Towers' },
+  { id: 'weapons', label: 'Weapons' },
+  { id: 'enemies', label: 'Enemies' },
+  { id: 'bosses', label: 'Bosses' },
+  { id: 'difficulties', label: 'Difficulties' },
+];
+
+function adminFieldHtml(id, label, value, defaultVal, step) {
+  const mod = value !== defaultVal ? ' modified' : '';
+  const s = step != null ? step : (defaultVal % 1 !== 0 ? 0.01 : 1);
+  return `<div class="admin-field${mod}"><label>${label}</label><input type=number data-id="${id}" value="${value}" step="${s}"><div class="admin-default">Default: ${defaultVal}</div></div>`;
+}
+
+function renderAdminTabs() {
+  adminTabs.innerHTML = ADMIN_TAB_LIST.map(t =>
+    `<button data-tab="${t.id}" class=${t.id === adminTab ? 'sel' : ''}>${t.label}</button>`
+  ).join('');
+}
+
+function renderAdminBody() {
+  let html = '';
+  if (adminTab === 'settings') {
+    html += '<div class=admin-section><h3>Game Settings</h3><div class=admin-grid>';
+    Object.keys(GS_DEFAULTS).forEach(k => {
+      html += adminFieldHtml(`gs.${k}`, GS_LABELS[k] || k, gs[k], GS_DEFAULTS[k]);
+    });
+    html += '</div></div>';
+  } else if (adminTab === 'towers') {
+    T.forEach((t, i) => {
+      const orig = TOWERS[i];
+      html += `<div class=admin-section><h3>${orig.i} ${orig.n}</h3><div class=admin-grid>`;
+      TOWER_FIELDS.forEach(f => {
+        html += adminFieldHtml(`t.${i}.${f}`, TOWER_LABELS[f], t[f], orig[f]);
+      });
+      html += '</div></div>';
+    });
+  } else if (adminTab === 'weapons') {
+    W.forEach((w, i) => {
+      const orig = WEAPONS[i];
+      html += `<div class=admin-section><h3>${orig.i} ${orig.n}</h3><div class=admin-grid>`;
+      WEAPON_FIELDS.forEach(f => {
+        html += adminFieldHtml(`w.${i}.${f}`, WEAPON_LABELS[f], w[f], orig[f]);
+      });
+      html += '</div></div>';
+    });
+  } else if (adminTab === 'enemies') {
+    E.forEach((e, i) => {
+      const orig = ENEMIES[i];
+      html += `<div class=admin-section><h3>${orig.i} ${orig.n}</h3><div class=admin-grid>`;
+      ENEMY_FIELDS.forEach(f => {
+        html += adminFieldHtml(`e.${i}.${f}`, ENEMY_LABELS[f], e[f], orig[f]);
+      });
+      html += '</div></div>';
+    });
+  } else if (adminTab === 'bosses') {
+    html += `<div class=admin-section><h3>${BOSS.i} ${BOSS.n} (Boss)</h3><div class=admin-grid>`;
+    ENEMY_FIELDS.forEach(f => {
+      html += adminFieldHtml(`b.${f}`, ENEMY_LABELS[f], B[f], BOSS[f]);
+    });
+    html += '</div></div>';
+    html += `<div class=admin-section><h3>${MEGA_BOSS.i} ${MEGA_BOSS.n} (Mega Boss)</h3><div class=admin-grid>`;
+    ENEMY_FIELDS.forEach(f => {
+      html += adminFieldHtml(`mb.${f}`, ENEMY_LABELS[f], MB[f], MEGA_BOSS[f]);
+    });
+    html += '</div></div>';
+  } else if (adminTab === 'difficulties') {
+    DIFF.forEach((d, i) => {
+      const orig = DIFFICULTIES[i];
+      html += `<div class=admin-section><h3>${orig.n}</h3><div class=admin-grid>`;
+      DIFF_FIELDS.forEach(f => {
+        html += adminFieldHtml(`d.${i}.${f}`, DIFF_LABELS[f], d[f], orig[f]);
+      });
+      html += '</div></div>';
+    });
+  }
+  adminBody.innerHTML = html;
+}
+
+function collectAdminInputs() {
+  const inputs = adminBody.querySelectorAll('input[data-id]');
+  inputs.forEach(inp => {
+    const id = inp.dataset.id;
+    const val = parseFloat(inp.value);
+    if (isNaN(val)) return;
+    const parts = id.split('.');
+    if (parts[0] === 'gs') {
+      gs[parts[1]] = val;
+    } else if (parts[0] === 't') {
+      T[+parts[1]][parts[2]] = val;
+    } else if (parts[0] === 'w') {
+      W[+parts[1]][parts[2]] = val;
+    } else if (parts[0] === 'e') {
+      E[+parts[1]][parts[2]] = val;
+    } else if (parts[0] === 'b') {
+      B[parts[1]] = val;
+    } else if (parts[0] === 'mb') {
+      MB[parts[1]] = val;
+    } else if (parts[0] === 'd') {
+      DIFF[+parts[1]][parts[2]] = val;
+    }
+  });
+}
+
+function openAdmin() {
+  adminTab = 'settings';
+  renderAdminTabs();
+  renderAdminBody();
+  adminModal.style.display = 'grid';
+}
+
+function closeAdmin() {
+  adminModal.style.display = 'none';
+}
+
+adminTrigger.addEventListener('click', openAdmin);
+
+adminTabs.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-tab]');
+  if (!b) return;
+  collectAdminInputs();
+  adminTab = b.dataset.tab;
+  renderAdminTabs();
+  renderAdminBody();
+});
+
+adminSave.addEventListener('click', () => {
+  collectAdminInputs();
+  saveAdmin();
+  mkBtns(tl, T, 't');
+  mkBtns(wl, W, 'w');
+  mkDiffBtns();
+  applySel();
+  closeAdmin();
+});
+
+adminReset.addEventListener('click', () => {
+  resetAdmin();
+  mkBtns(tl, T, 't');
+  mkBtns(wl, W, 'w');
+  mkDiffBtns();
+  applySel();
+  renderAdminBody();
+});
 
 function mkBtns(el, arr, k) {
   let s = '';
@@ -84,8 +370,8 @@ mkBtns(wl, W, 'w');
 
 function mkDiffBtns() {
   let s = '';
-  for (let i = 0; i < DIFFICULTIES.length; i++) {
-    const d = DIFFICULTIES[i];
+  for (let i = 0; i < DIFF.length; i++) {
+    const d = DIFF[i];
     s += `<button data-d=${i} class=${i === diff ? 'sel' : ''}>${d.n}<small>${d.waves} waves — ${d.desc}</small></button>`;
   }
   diffRow.innerHTML = s;
@@ -312,10 +598,10 @@ function mkBoss(boss) {
   gr.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = gr;
   g.fillRect(0, 0, sz, sz);
-  g.fillStyle = boss === MEGA_BOSS ? 'rgba(255,110,120,.85)' : 'rgba(255,170,80,.85)';
+  g.fillStyle = boss === MB ? 'rgba(255,110,120,.85)' : 'rgba(255,170,80,.85)';
   shape(g, 7, x, y, r);
   g.fill();
-  g.strokeStyle = boss === MEGA_BOSS ? 'rgba(255,120,160,.6)' : 'rgba(255,210,150,.5)';
+  g.strokeStyle = boss === MB ? 'rgba(255,120,160,.6)' : 'rgba(255,210,150,.5)';
   g.lineWidth = 3;
   g.stroke();
   g.font = `${sz * 0.56}px system-ui,Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji`;
@@ -679,18 +965,14 @@ function resize() {
   playH = Math.max(220, h - playTopInset - playBottomInset);
   cx = w * 0.5;
   cy = playTopInset + playH * 0.5;
-  const bottomInset = Math.max(0, h - panelRect.top);
-  const playH = h - bottomInset * 0.5;
-  cx = w * 0.5;
-  cy = playH * 0.52;
   mkPath();
   mkBg();
   initDynBg();
   mkSpr(tSpr, T, 54, 10, 0.9);
   mkSpr(wSpr, W, 42, 180, 0.86);
   mkSpr(eSpr, E, 46, 300, 0.9);
-  bSpr = mkBoss(BOSS);
-  megaSpr = mkBoss(MEGA_BOSS);
+  bSpr = mkBoss(B);
+  megaSpr = mkBoss(MB);
 }
 
 addEventListener('resize', resize, { passive: true });
@@ -772,14 +1054,14 @@ function mkBar() {
     const t = tier[sel];
     const ch = T[tt[sel]];
     const we = W[tw[sel]];
-    const base = ch.c + we.c * 0.72;
-    const cost = (base * (0.58 + 0.62 * t) * (1 + 0.03 * wave)) | 0;
+    const base = ch.c + we.c * gs.weaponCostMul;
+    const cost = (base * (gs.upgBaseMul + gs.upgScaleMul * t) * (1 + gs.upgWaveScale * wave)) | 0;
     const nextTier = t + 1;
     let tipText = `Upgrade to Tier ${nextTier} — Cost ${fmt(cost)}c`;
-    if (t >= 100) tipText += ' (Max level)';
+    if (t >= gs.maxTier) tipText += ' (Max level)';
     else if (money < cost) tipText += ` (Need ${fmt(cost - money)} more credits)`;
     upB.title = tipText;
-    upB.disabled = t >= 100 || money < cost;
+    upB.disabled = t >= gs.maxTier || money < cost;
   } else {
     upB.disabled = true;
     upB.title = '';
@@ -817,16 +1099,16 @@ function updBest() {
 }
 
 function resetRun() {
-  const d = DIFFICULTIES[diff];
+  const d = DIFF[diff];
   maxWaves = d.waves;
   tn = 0;
   en = 0;
   fn = 0;
   wave = 1;
-  wait = 1.4;
+  wait = gs.initialWait;
   money = d.money;
   bank = 0;
-  core = 50;
+  core = gs.startingCore;
   dead = 0;
   sel = -1;
   hoverT = -1;
@@ -845,16 +1127,16 @@ function resetRun() {
 }
 
 function waveBudget() {
-  return wave < 2 ? 16 : Math.min(240, 16 + wave * 3.2);
+  return wave < 2 ? gs.waveBudgetBase : Math.min(gs.waveBudgetMax, gs.waveBudgetBase + wave * gs.waveBudgetScale);
 }
 
 function spawnPack(isBoss) {
   if (en >= ME - 2) return;
   const k = (rng() * E.length) | 0;
-  const e = isBoss === 2 ? MEGA_BOSS : isBoss ? BOSS : E[k];
+  const e = isBoss === 2 ? MB : isBoss ? B : E[k];
   const base = waveBudget();
   const cnt = isBoss ? 1 : Math.max(1, (base * e.c * (0.75 + rng() * 0.55)) | 0);
-  const dif = DIFFICULTIES[diff];
+  const dif = DIFF[diff];
   const hpU = (1.8 + wave * 0.16) * e.hp * (0.78 + rng() * 0.55) * dif.hpMul;
   const sp = (0.03 + wave * 0.0001) * e.sp * (0.92 + rng() * 0.16) * dif.spdMul;
   const b = (2.5 + wave * 0.8) * e.b;
@@ -874,8 +1156,8 @@ function spawnWave() {
   const packs = 4 + Math.min(6, (wave / 3) | 0);
   pendingPacks = packs;
   spawnTick = 0;
-  bossPending = wave % 5 === 0 ? 1 : 0;
-  megaPending = wave % 10 === 0 ? 1 : 0;
+  bossPending = wave % gs.bossEvery === 0 ? 1 : 0;
+  megaPending = wave % gs.megaBossEvery === 0 ? 1 : 0;
   if (megaPending) {
     showNote(`Wave ${wave}: abyss titan inbound`);
   } else {
@@ -918,9 +1200,9 @@ function place(x, y, ti, wi) {
   y = clamp(y, 14, h - 14);
   const ch = T[ti];
   const we = W[wi];
-  const cost = (ch.c + we.c * 0.72) | 0;
+  const cost = (ch.c + we.c * gs.weaponCostMul) | 0;
   if (money < cost) return;
-  for (let i = 0; i < tn; i++) if (dist2(x, y, tx[i], ty[i]) < 900) return;
+  for (let i = 0; i < tn; i++) if (dist2(x, y, tx[i], ty[i]) < gs.towerMinDist) return;
   money = Math.max(0, money - cost);
   const i = tn++;
   tx[i] = x;
@@ -946,8 +1228,8 @@ function sell(i) {
   if (i < 0 || i >= tn || dead || paused) return;
   const ch = T[tt[i]];
   const we = W[tw[i]];
-  const base = ch.c + we.c * 0.72;
-  const val = base * (0.85 + 0.35 * tier[i]) * 0.62;
+  const base = ch.c + we.c * gs.weaponCostMul;
+  const val = base * (0.85 + 0.35 * tier[i]) * gs.sellRefundMul;
   money = toInt(money + val);
   tn--;
   if (i !== tn) {
@@ -971,11 +1253,11 @@ function sell(i) {
 function upgrade(i) {
   if (i < 0 || i >= tn || dead || paused) return;
   const t = tier[i];
-  if (t >= 100) return;
+  if (t >= gs.maxTier) return;
   const ch = T[tt[i]];
   const we = W[tw[i]];
-  const base = ch.c + we.c * 0.72;
-  const cost = (base * (0.58 + 0.62 * t) * (1 + 0.03 * wave)) | 0;
+  const base = ch.c + we.c * gs.weaponCostMul;
+  const cost = (base * (gs.upgBaseMul + gs.upgScaleMul * t) * (1 + gs.upgWaveScale * wave)) | 0;
   if (money < cost) return;
   money = Math.max(0, money - cost);
   tier[i] = t + 1;
@@ -1051,8 +1333,8 @@ function showTip() {
   if (hoverE >= 0) {
     const i = hoverE;
     const bossType = eboss[i];
-    const name = bossType === 2 ? MEGA_BOSS.n : bossType ? BOSS.n : E[et[i]].n;
-    const icon = bossType === 2 ? MEGA_BOSS.i : bossType ? BOSS.i : E[et[i]].i;
+    const name = bossType === 2 ? MB.n : bossType ? B.n : E[et[i]].n;
+    const icon = bossType === 2 ? MB.i : bossType ? B.i : E[et[i]].i;
     tip.innerHTML = `${icon} ${name}<br>HP ${fmt(eh[i])} | Count ${fmt(ec[i])}`;
     positionTip(x, y);
     return;
@@ -1116,7 +1398,7 @@ function upd(dt) {
   for (let i = 0; i < en; ) {
     ep[i] += es[i] * dt;
     if (ep[i] >= 1) {
-      const dmgC = Math.max(1, (ec[i] * ek[i] * DIFFICULTIES[diff].coreDmgMul) / 2400) | 0;
+      const dmgC = Math.max(1, (ec[i] * ek[i] * DIFF[diff].coreDmgMul) / 2400) | 0;
       core = Math.max(0, core - dmgC);
       en--;
       if (i !== en) {
@@ -1177,10 +1459,10 @@ function upd(dt) {
       }
     }
     if (tar < 0) continue;
-    const sat = 1 / (1 + 0.18 * Math.max(0, use[tw[i]] - 1));
+    const sat = 1 / (1 + gs.antiMonoFactor * Math.max(0, use[tw[i]] - 1));
     const eff = 1 / (1 + Math.max(0, heat[i] - 1.15) * 1.0);
-    const dmg0 = we.d * ch.fr * (1 + 0.18 * (t - 1)) * sat * eff;
-    heat[i] += we.h * 0.18;
+    const dmg0 = we.d * ch.fr * (1 + gs.antiMonoFactor * (t - 1)) * sat * eff;
+    heat[i] += we.h * gs.antiMonoFactor;
     cd[i] = 1 / (we.f * ch.fr * (1 + 0.06 * (t - 1)));
     const tx0 = ex[tar];
     const ty0 = ey[tar];
@@ -1275,17 +1557,18 @@ function upd(dt) {
     if (wave >= maxWaves) {
       dead = 2;
       try { localStorage.removeItem(SAVE_KEY); } catch {}
-      showNote(`VICTORY! ${DIFFICULTIES[diff].n} mode cleared at wave ${wave}!`, 999);
+      showNote(`VICTORY! ${DIFF[diff].n} mode cleared at wave ${wave}!`, 999);
       mkBar();
       tip.style.opacity = 0;
     } else {
-      const waveBonus = toInt(15 + wave * 8);
+      const waveBonus = toInt(gs.waveBonus + wave * gs.waveBonusScale);
       money = toInt(money + waveBonus);
       bank = toInt(money);
-      money = toInt(bank * 1.2);
-      showNote(`Wave ${wave}/${maxWaves} cleared +${fmt(waveBonus)}c bonus +20% bank`);
+      money = toInt(bank * gs.bankInterest);
+      const intPct = Math.round((gs.bankInterest - 1) * 100);
+      showNote(`Wave ${wave}/${maxWaves} cleared +${fmt(waveBonus)}c bonus +${intPct}% bank`);
       wave++;
-      wait = 1.6;
+      wait = gs.waitTime;
     }
   }
   if (core <= 0 && dead === 0) {
@@ -1636,8 +1919,10 @@ function loadGame() {
 addEventListener('visibilitychange', () => { if (document.hidden) saveGame(); });
 addEventListener('pagehide', saveGame);
 
+loadAdmin();
 setSpeed(0);
 applySel();
+mkDiffBtns();
 resize();
 ui();
 mkBar();
