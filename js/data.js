@@ -58,10 +58,10 @@ export const MEGA_BOSS = {
 };
 
 export const DIFFICULTIES = [
-  { n: 'Easy', waves: 60, hpMul: 0.6, spdMul: 0.8, money: 340, coreDmgMul: 0.55, desc: 'Relaxed — anyone can beat it' },
-  { n: 'Intermediate', waves: 100, hpMul: 0.85, spdMul: 0.92, money: 280, coreDmgMul: 0.8, desc: 'A fair challenge' },
-  { n: 'Hard', waves: 140, hpMul: 1.0, spdMul: 1.0, money: 240, coreDmgMul: 1.0, desc: 'Requires experience' },
-  { n: 'Expert', waves: 170, hpMul: 1.4, spdMul: 1.15, money: 190, coreDmgMul: 1.35, desc: 'Only pros survive' },
-  { n: 'Impossible', waves: 200, hpMul: 2.0, spdMul: 1.35, money: 150, coreDmgMul: 1.85, desc: 'Near-certain death' },
-  { n: 'Cataclysm', waves: 240, hpMul: 2.6, spdMul: 1.5, money: 110, coreDmgMul: 2.25, desc: 'Beyond impossible' },
+  { n: 'Easy', waves: 70, hpMul: 0.75, spdMul: 0.85, money: 340, coreDmgMul: 0.7, desc: 'Relaxed — but stay sharp' },
+  { n: 'Intermediate', waves: 110, hpMul: 1.0, spdMul: 0.98, money: 280, coreDmgMul: 0.95, desc: 'A real challenge' },
+  { n: 'Hard', waves: 150, hpMul: 1.25, spdMul: 1.08, money: 240, coreDmgMul: 1.2, desc: 'Demands sharp strategy' },
+  { n: 'Expert', waves: 185, hpMul: 1.7, spdMul: 1.22, money: 190, coreDmgMul: 1.6, desc: 'Only veterans survive' },
+  { n: 'Impossible', waves: 220, hpMul: 2.4, spdMul: 1.45, money: 150, coreDmgMul: 2.1, desc: 'Practically unwinnable' },
+  { n: 'Cataclysm', waves: 300, hpMul: 4.0, spdMul: 1.8, money: 110, coreDmgMul: 3.5, desc: 'Absolute annihilation' },
 ];

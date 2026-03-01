@@ -58,27 +58,34 @@
 @media (hover:none){#hint{opacity:.84;visibility:visible}}
 #adminTrigger{text-align:center;margin-top:16px;cursor:pointer;opacity:.10;font-size:11px;letter-spacing:1px;user-select:none}
 #adminTrigger:hover{opacity:.25}
-#adminModal{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in oklab,#000 78%,transparent);backdrop-filter:blur(12px) saturate(1.25);z-index:5}
-.admin-card{width:min(860px,94vw);max-height:88vh;display:flex;flex-direction:column;padding:16px 18px;border-radius:18px;border:1px solid var(--bd);background:color-mix(in oklab,#071022 94%,#000);box-shadow:0 30px 120px #0008;overflow:hidden}
-.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px}
-.admin-header h2{margin:0;font-size:16px;letter-spacing:.5px}
+#adminModal{position:fixed;inset:0;display:grid;place-items:center;background:color-mix(in oklab,#000 78%,transparent);backdrop-filter:blur(14px) saturate(1.3);z-index:5}
+.admin-card{--ap:hotpink;--av:#9400d3;width:min(900px,94vw);max-height:90vh;display:flex;flex-direction:column;padding:20px 22px;border-radius:20px;border:1px solid color-mix(in oklab,var(--ap) 30%,#1a0a2e);background:linear-gradient(168deg,color-mix(in oklab,#0d0520 94%,var(--av)),color-mix(in oklab,#060218 96%,#000));box-shadow:0 0 60px color-mix(in oklab,var(--av) 18%,transparent),0 30px 120px #0006;overflow:hidden}
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid color-mix(in oklab,var(--ap) 16%,#1a0a2e);flex-wrap:wrap;gap:8px}
+.admin-header h2{margin:0;font-size:17px;letter-spacing:.6px;background:linear-gradient(135deg,var(--ap),#e0b0ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:900}
 .admin-actions{display:flex;gap:8px}
-.admin-actions button{padding:7px 14px;border-radius:10px;border:1px solid var(--bd);background:color-mix(in oklab,#0b1020 70%,#000);color:#eaf6ff;cursor:pointer;font-weight:700;font-size:11px;letter-spacing:.3px;transition:.12s border-color,.12s background}
-.admin-actions button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}
-.admin-tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
-.admin-tabs button{padding:6px 12px;border-radius:10px;border:1px solid color-mix(in oklab,#8cf 18%,#000);background:color-mix(in oklab,#0b1020 68%,#000);color:#dff;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.3px;transition:.12s border-color,.12s background}
-.admin-tabs button:hover{border-color:#bff;background:color-mix(in oklab,#162848 72%,#000)}
-.admin-tabs button.sel{border-color:#bff;background:color-mix(in oklab,#1a284b 78%,#000)}
-.admin-body{overflow-y:auto;flex:1;min-height:0}
-.admin-section{margin-bottom:14px}
-.admin-section h3{margin:0 0 6px;font-size:12px;letter-spacing:.8px;text-transform:uppercase;opacity:.85}
-.admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px 12px}
-.admin-field{display:flex;flex-direction:column;gap:2px;padding:6px 8px;border-radius:8px;background:color-mix(in oklab,#0b1020 50%,#000);border:1px solid transparent}
-.admin-field.modified{border-color:color-mix(in oklab,#8cf 30%,#000)}
-.admin-field label{font-size:10px;letter-spacing:.6px;opacity:.7;text-transform:uppercase;font-weight:600}
-.admin-field .admin-default{font-size:9px;opacity:.45;margin-top:1px}
-.admin-field input{width:100%;padding:4px 6px;border-radius:6px;border:1px solid color-mix(in oklab,#8cf 16%,#000);background:color-mix(in oklab,#071022 80%,#000);color:#eaf6ff;font-size:12px;font-family:inherit;outline:none}
-.admin-field input:focus{border-color:#bff}
+.admin-actions button{padding:8px 16px;border-radius:10px;border:1px solid color-mix(in oklab,var(--ap) 24%,#1a0a2e);background:color-mix(in oklab,#140830 80%,#000);color:#f0daf8;cursor:pointer;font-weight:700;font-size:11px;letter-spacing:.3px;transition:.15s border-color,.15s background,.15s box-shadow}
+.admin-actions button:hover{border-color:var(--ap);background:color-mix(in oklab,#2a1050 70%,#000);box-shadow:0 0 12px color-mix(in oklab,var(--ap) 20%,transparent)}
+.admin-tabs{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap}
+.admin-tabs button{padding:7px 14px;border-radius:10px;border:1px solid color-mix(in oklab,var(--av) 22%,#1a0a2e);background:color-mix(in oklab,#100828 72%,#000);color:#d8c0e8;cursor:pointer;font-size:11px;font-weight:700;letter-spacing:.3px;transition:.15s border-color,.15s background,.15s box-shadow}
+.admin-tabs button:hover{border-color:color-mix(in oklab,var(--ap) 60%,var(--av));background:color-mix(in oklab,#2a1050 68%,#000)}
+.admin-tabs button.sel{border-color:var(--ap);background:linear-gradient(180deg,color-mix(in oklab,#2a1050 82%,#000),color-mix(in oklab,#1a0838 85%,#000));color:#fff;box-shadow:0 0 10px color-mix(in oklab,var(--ap) 16%,transparent)}
+.admin-body{overflow-y:auto;flex:1;min-height:0;padding-right:4px}
+.admin-body::-webkit-scrollbar{width:6px}.admin-body::-webkit-scrollbar-track{background:transparent}.admin-body::-webkit-scrollbar-thumb{background:color-mix(in oklab,var(--av) 40%,#1a0a2e);border-radius:3px}.admin-body::-webkit-scrollbar-thumb:hover{background:color-mix(in oklab,var(--ap) 40%,#1a0a2e)}
+.admin-section{margin-bottom:16px}
+.admin-section h3{margin:0 0 8px;font-size:12px;letter-spacing:.8px;text-transform:uppercase;opacity:.85;color:color-mix(in oklab,var(--ap) 60%,#e0c0f0);padding-bottom:4px;border-bottom:1px solid color-mix(in oklab,var(--av) 14%,#1a0a2e)}
+.admin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(182px,1fr));gap:8px 12px}
+.admin-field{display:flex;flex-direction:column;gap:3px;padding:8px 10px;border-radius:10px;background:color-mix(in oklab,#0e0524 60%,#000);border:1px solid color-mix(in oklab,var(--av) 10%,transparent);transition:.15s border-color,.15s background}
+.admin-field:hover{border-color:color-mix(in oklab,var(--av) 24%,#1a0a2e);background:color-mix(in oklab,#140830 55%,#000)}
+.admin-field.modified{border-color:var(--ap);background:color-mix(in oklab,#1e0a3a 55%,#000)}
+.admin-field label{font-size:10px;letter-spacing:.6px;opacity:.75;text-transform:uppercase;font-weight:600;color:#d0b0e0}
+.admin-field .admin-default{font-size:9px;opacity:.45;margin-top:1px;color:#c0a0d0}
+.admin-field input{width:100%;padding:5px 8px;border-radius:7px;border:1px solid color-mix(in oklab,var(--av) 20%,#1a0a2e);background:color-mix(in oklab,#080318 82%,#000);color:#f0e4ff;font-size:12px;font-family:inherit;outline:none;transition:.15s border-color,.15s box-shadow}
+.admin-field input:focus{border-color:var(--ap);box-shadow:0 0 8px color-mix(in oklab,var(--ap) 22%,transparent)}
+.admin-badge{padding:3px 10px;border-radius:6px;background:linear-gradient(135deg,var(--ap),var(--av));color:#fff;font-size:10px;font-weight:900;letter-spacing:1.8px;text-transform:uppercase;animation:admin-pulse 2.5s ease-in-out infinite alternate}
+@keyframes admin-pulse{0%{opacity:.85;box-shadow:0 0 6px color-mix(in oklab,var(--ap) 30%,transparent)}100%{opacity:1;box-shadow:0 0 14px color-mix(in oklab,var(--ap) 50%,transparent)}}
+.admin-actions button#adminSave{background:linear-gradient(135deg,color-mix(in oklab,var(--av) 50%,#1a0838),color-mix(in oklab,var(--ap) 30%,#1a0838));border-color:var(--ap);color:#fff}
+.admin-actions button#adminSave:hover{box-shadow:0 0 16px color-mix(in oklab,var(--ap) 30%,transparent);border-color:#fff}
+.admin-actions button#adminReset{border-style:dashed}
 </style></head><body>
 <canvas id=c></canvas>
 
@@ -125,7 +132,7 @@
 </div></div>
 
 <div id=adminModal style="display:none"><div class=admin-card>
-  <div class=admin-header><h2>Admin Panel</h2><div class=admin-actions><button id=adminReset>Reset to Default</button><button id=adminSave>Save &amp; Close</button></div></div>
+  <div class=admin-header><h2>Admin Panel</h2><div class=admin-badge>ADMIN</div><div class=admin-actions><button id=adminReset>Reset All</button><button id=adminSave>Save &amp; Close</button></div></div>
   <div class=admin-tabs id=adminTabs></div>
   <div class=admin-body id=adminBody></div>
 </div></div>
