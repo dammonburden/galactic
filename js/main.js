@@ -14,6 +14,7 @@ const rand = $('rand');
 const preset = $('preset');
 const diffRow = $('diffRow');
 const mapRow = $('mapRow');
+const panel = $('panel');
 const ts = $('ts');
 const ws = $('ws');
 const speed = $('speed');
@@ -59,6 +60,10 @@ const MAPS = [
   { n: 'Zigzag', desc: 'Sharp switchbacks' },
   { n: 'Figure-8', desc: 'Crossing loops' },
   { n: 'Star', desc: 'Star-shaped orbit' },
+  { n: 'Helix', desc: 'Twin drifting coils' },
+  { n: 'Diamond', desc: 'Angular crystal run' },
+  { n: 'Orbitals', desc: 'Ring-hopping lanes' },
+  { n: 'Comet', desc: 'Tail-heavy slingshot' },
 ];
 
 const T = TOWERS;
@@ -362,6 +367,49 @@ function mkPath() {
       px[i] = cx + Math.cos(a) * starR * decay;
       py[i] = cy + Math.sin(a) * starR * decay;
     }
+  } else if (mapIdx === 4) {
+    const loops = 4;
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const a = t * Math.PI * 2 * loops;
+      const r = mr * (0.18 + 0.8 * (1 - t));
+      px[i] = cx + Math.cos(a) * r;
+      py[i] = cy + Math.sin(a * 2.1) * r * 0.62;
+    }
+  } else if (mapIdx === 5) {
+    const sides = 4;
+    const loops = 4;
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const a = t * Math.PI * 2 * loops;
+      const shapePow = 0.62;
+      const cs = Math.cos(a);
+      const sn = Math.sin(a);
+      const diamond = (Math.pow(Math.abs(cs), shapePow) + Math.pow(Math.abs(sn), shapePow)) ** (-1 / shapePow);
+      const r = mr * (0.2 + 0.75 * (1 - t)) * diamond;
+      px[i] = cx + Math.cos(a + Math.PI / sides) * r;
+      py[i] = cy + Math.sin(a + Math.PI / sides) * r;
+    }
+  } else if (mapIdx === 6) {
+    const rings = 5;
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const a = t * Math.PI * 2 * (2.4 + t * 4.4);
+      const ring = Math.floor(t * rings);
+      const ringT = (t * rings) - ring;
+      const ringR = mr * (0.18 + 0.15 * ring + 0.12 * ringT);
+      px[i] = cx + Math.cos(a) * ringR;
+      py[i] = cy + Math.sin(a) * ringR;
+    }
+  } else if (mapIdx === 7) {
+    for (let i = 0; i < ps; i++) {
+      const t = i / (ps - 1);
+      const a = t * Math.PI * 2 * 3.3;
+      const tail = 1 - t;
+      const r = mr * (0.1 + tail * tail * 0.95);
+      px[i] = cx + Math.cos(a) * r + Math.sin(a * 0.5) * mr * 0.12;
+      py[i] = cy + Math.sin(a) * r * 0.8;
+    }
   }
 }
 
@@ -427,7 +475,7 @@ const sX = new Float32Array(NS), sY = new Float32Array(NS);
 const sDx = new Float32Array(NS), sDy = new Float32Array(NS);
 const sLf = new Float32Array(NS), sMx = new Float32Array(NS);
 let dynT = 0, hOff = 0;
-const MAP_HUE = [[180, 210], [260, 300], [20, 55], [120, 170]];
+const MAP_HUE = [[180, 210], [260, 300], [20, 55], [120, 170], [190, 250], [310, 350], [45, 75], [0, 30]];
 
 function initDynBg() {
   hOff = (Math.random() * 40 - 20) | 0;
@@ -566,6 +614,52 @@ function drawDynBg() {
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
+  } else if (mapIdx === 4) {
+    /* Helix — crossing ribbons */
+    const pulse = (Math.sin(now * 1.5) * 0.5 + 0.5) * 0.22;
+    ctx.globalAlpha = 0.08 + pulse;
+    ctx.strokeStyle = `hsl(${215 + hOff} 78% 70% / 1)`;
+    ctx.lineWidth = 1.1;
+    for (let i = 20; i < ps - 20; i += 40) {
+      ctx.beginPath();
+      ctx.moveTo(px[i], py[i]);
+      ctx.lineTo(px[i + 16], py[i + 16]);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (mapIdx === 5) {
+    /* Diamond — corner pulses */
+    ctx.globalAlpha = 0.2;
+    ctx.fillStyle = `hsl(${330 + hOff} 75% 72% / 1)`;
+    for (let i = 30; i < ps; i += 120) {
+      const p = 2.5 + Math.sin(now * 2 + i * 0.1) * 1.2;
+      ctx.beginPath();
+      ctx.arc(px[i], py[i], p, 0, 6.283);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  } else if (mapIdx === 6) {
+    /* Orbitals — rotating lane beacons */
+    ctx.globalAlpha = 0.18;
+    ctx.strokeStyle = `hsl(${55 + hOff} 78% 74% / 1)`;
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 6; i++) {
+      const a = now * 0.35 + i * 1.047;
+      const rr = Math.min(w, h) * (0.16 + i * 0.05);
+      ctx.beginPath();
+      ctx.arc(cx, cy, rr, a, a + 0.75);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  } else if (mapIdx === 7) {
+    /* Comet — glowing tail behind the core */
+    const grad = ctx.createLinearGradient(cx, cy, cx - Math.min(w, h) * 0.35, cy + Math.min(w, h) * 0.18);
+    grad.addColorStop(0, `hsl(${10 + hOff} 90% 72% / .24)`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(cx - Math.min(w, h) * 0.18, cy + Math.min(w, h) * 0.08, Math.min(w, h) * 0.28, Math.min(w, h) * 0.1, 0.35, 0, 6.283);
+    ctx.fill();
   }
 }
 
@@ -575,8 +669,11 @@ function resize() {
   h = innerHeight;
   c.width = (w * dpr) | 0;
   c.height = (h * dpr) | 0;
+  const panelRect = panel.getBoundingClientRect();
+  const bottomInset = Math.max(0, h - panelRect.top);
+  const playH = h - bottomInset * 0.5;
   cx = w * 0.5;
-  cy = h * 0.5;
+  cy = playH * 0.52;
   mkPath();
   mkBg();
   initDynBg();
@@ -653,13 +750,13 @@ function mkBar() {
   let s = '';
   for (let i = 0; i < selT.length; i++) {
     const tower = T[selT[i]];
-    s += `<button data-i=${i} class=${i === st ? 'on' : ''} data-tip="${tower.i} ${tower.n}<br>Chassis cost ${tower.c}c">${tower.i}</button>`;
+    s += `<button data-i=${i} class=${i === st ? 'on' : ''} data-tip="${tower.i} ${tower.n}\nChassis cost ${tower.c}c">${tower.i}</button>`;
   }
   ts.innerHTML = s;
   s = '';
   for (let i = 0; i < selW.length; i++) {
     const weapon = W[selW[i]];
-    s += `<button data-i=${i} class=${i === sw ? 'on' : ''} data-tip="${weapon.i} ${weapon.n}<br>Weapon cost ${weapon.c}c">${weapon.i}</button>`;
+    s += `<button data-i=${i} class=${i === sw ? 'on' : ''} data-tip="${weapon.i} ${weapon.n}\nWeapon cost ${weapon.c}c">${weapon.i}</button>`;
   }
   ws.innerHTML = s;
   if (sel >= 0) {
@@ -1413,7 +1510,7 @@ const showPanelTip = (b) => {
   if (!b || b === panelTipTarget) return;
   panelTipTarget = b;
   const r = b.getBoundingClientRect();
-  tip.innerHTML = b.dataset.tip;
+  tip.textContent = b.dataset.tip;
   tip.classList.add('panel');
   tip.style.left = `${r.left + r.width / 2}px`;
   tip.style.top = `${r.top - 8}px`;
