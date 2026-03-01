@@ -2161,21 +2161,21 @@ addEventListener('keydown', (e) => {
     sw = k.charCodeAt(0) - 49;
     mkBar();
   } else if (k === ' ') {
+    e.preventDefault();
+    if (menu.style.display !== 'none' || dead) return;
     paused = !paused;
     if (paused) showNote('Paused', 1.2);
-    e.preventDefault();
     mkBar();
   } else if (k === 'u' || k === 'U') {
     if (sel >= 0) upgrade(sel);
   } else if (k === 'r' || k === 'R') {
-    try { localStorage.removeItem(SAVE_KEY); } catch {}
-    menu.style.display = 'grid';
-    applySel();
-    tip.style.opacity = 0;
+    confirmRestart();
   } else if (k === '[' || k === '{' || k === '-' || k === '_') {
+    if (menu.style.display !== 'none') return;
     setSpeed(speedIdx - 1);
     showNote(`Speed ${timeScale}x`, 1.2);
   } else if (k === ']' || k === '}' || k === '=' || k === '+') {
+    if (menu.style.display !== 'none') return;
     setSpeed(speedIdx + 1);
     showNote(`Speed ${timeScale}x`, 1.2);
   }
@@ -2248,6 +2248,7 @@ ws.addEventListener('pointerout', handlePanelOut);
 
 speed.innerHTML = ['1x', '5x', '50x', '500x'].map((label, i) => `<button data-i=${i} class=${i === 0 ? 'on' : ''}>${label}</button>`).join('');
 speed.onclick = (e) => {
+  if (menu.style.display !== 'none') return;
   const b = e.target.closest('button');
   if (!b) return;
   const i = +b.dataset.i;
@@ -2257,18 +2258,24 @@ speed.onclick = (e) => {
 
 const SAVE_KEY = 'galactic_td_save';
 
+function confirmRestart() {
+  const inMatch = menu.style.display === 'none' && !dead;
+  if (inMatch && !confirm('Restart? Current run will be lost.')) return;
+  try { localStorage.removeItem(SAVE_KEY); } catch {}
+  menu.style.display = 'grid';
+  applySel();
+  tip.style.opacity = 0;
+}
+
 pauseBtn.onclick = () => {
-  if (menu.style.display !== 'none') return;
+  if (menu.style.display !== 'none' || dead) return;
   paused = !paused;
   if (paused) showNote('Paused', 1.2);
   mkBar();
 };
 
 restartBtn.onclick = () => {
-  try { localStorage.removeItem(SAVE_KEY); } catch {}
-  menu.style.display = 'grid';
-  applySel();
-  tip.style.opacity = 0;
+  confirmRestart();
 };
 
 function saveGame() {
