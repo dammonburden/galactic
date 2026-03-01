@@ -98,6 +98,7 @@ const GS_DEFAULTS = {
 let gs = {...GS_DEFAULTS};
 
 const ADMIN_KEY = 'galactic_td_admin';
+const ADMIN_VERSION = 2;
 
 const GS_LABELS = {
   startingCore: 'Starting Core HP',
@@ -134,6 +135,11 @@ function loadAdmin() {
   let saved;
   try { saved = JSON.parse(localStorage.getItem(ADMIN_KEY)); } catch { return; }
   if (!saved) return;
+  // Wipe old admin settings if version mismatch
+  if (saved._v !== ADMIN_VERSION) {
+    try { localStorage.removeItem(ADMIN_KEY); } catch {}
+    return;
+  }
   if (saved.towers) saved.towers.forEach((o, i) => { if (i < T.length) Object.assign(T[i], o); });
   if (saved.weapons) saved.weapons.forEach((o, i) => { if (i < W.length) Object.assign(W[i], o); });
   if (saved.enemies) saved.enemies.forEach((o, i) => { if (i < E.length) Object.assign(E[i], o); });
@@ -179,6 +185,7 @@ function saveAdmin() {
 
   try {
     localStorage.setItem(ADMIN_KEY, JSON.stringify({
+      _v: ADMIN_VERSION,
       towers: towerOverrides,
       weapons: weaponOverrides,
       enemies: enemyOverrides,
@@ -1033,6 +1040,7 @@ const eGlitch = new Float32Array(ME);   // glitch (stun) timer
 const eShatter = new Uint8Array(ME);    // shatter applied flag
 const eBaseSpd = new Float32Array(ME);  // original speed (before slow)
 const eSplitChild = new Uint8Array(ME); // 1 = spawned by split, cannot re-split
+const eEntropy = new Float32Array(ME);  // entropy stacks — cumulative dmg vulnerability
 
 // --- Particle system (Feature 3) ---
 const MP = 2000;
@@ -1091,6 +1099,7 @@ const tDmg = new Float64Array(MT);
 let runTotalKills = 0;
 let runTotalDmg = 0;
 let runStartTime = 0;
+let runEndTime = 0;
 let statsSaved = false;
 
 // --- Tower synergy (Feature 5) ---
@@ -1121,7 +1130,7 @@ let bossPending = 0;
 let megaPending = 0;
 let timeScale = 1;
 let speedIdx = 0;
-const use = new Uint16Array(10);
+const use = new Uint16Array(12);
 const toInt = (v) => Math.max(0, Math.floor(v));
 
 function mkBar() {
@@ -1213,6 +1222,7 @@ function resetRun() {
   runTotalKills = 0;
   runTotalDmg = 0;
   runStartTime = performance.now();
+  runEndTime = 0;
   statsSaved = false;
   for (let i = 0; i < MT; i++) { tKills[i] = 0; tDmg[i] = 0; synBonus[i] = 1; }
   nextWaveInfo = [];
@@ -1301,6 +1311,7 @@ function spawnPack(isBoss) {
   eExpose[i] = 0;
   eGlitch[i] = 0;
   eShatter[i] = 0;
+  eEntropy[i] = 0;
   eSplitChild[i] = 0;
 }
 
@@ -1327,6 +1338,8 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
   if (weaponFx === 'pierce') dm *= 1.3;
   // Status effect: expose increases damage taken
   if (eExpose[i] > 0) dm *= 1.2;
+  // Status effect: entropy — stacking vulnerability (each stack = +6% damage taken)
+  if (eEntropy[i] > 0) dm *= 1 + eEntropy[i] * 0.06;
   // Tower synergy bonus
   if (towerIdx >= 0 && towerIdx < tn) dm *= synBonus[towerIdx];
   // Stats tracking
@@ -1350,6 +1363,16 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
         const dy = ey[j] - ey[i];
         if (dx * dx + dy * dy < vr2) ep[j] = Math.max(0, ep[j] - 0.005);
       }
+    }
+    else if (weaponFx === 'entropy') {
+      // Stack entropy on target and nearby enemies in AoE — max 12 stacks
+      eEntropy[i] = Math.min(12, eEntropy[i] + 1);
+      eSlow[i] = Math.max(eSlow[i], 0.6);
+    }
+    else if (weaponFx === 'siphon') {
+      // Heal core by 3% of damage dealt (min 1 if any damage)
+      const heal = Math.max(1, (dm * 0.03) | 0);
+      core = Math.min(gs.startingCore, core + heal);
     }
   }
   const h = eh[i] - dm;
@@ -1379,7 +1402,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
       ek[i] = ek[en]; eboss[i] = eboss[en];
       eSlow[i] = eSlow[en]; eBurn[i] = eBurn[en]; eBurnDmg[i] = eBurnDmg[en];
       eExpose[i] = eExpose[en]; eGlitch[i] = eGlitch[en]; eShatter[i] = eShatter[en];
-      eBaseSpd[i] = eBaseSpd[en]; eSplitChild[i] = eSplitChild[en];
+      eBaseSpd[i] = eBaseSpd[en]; eSplitChild[i] = eSplitChild[en]; eEntropy[i] = eEntropy[en];
     }
     if (shouldSplit) {
       const halfCnt = Math.max(1, (killCount * 0.5) | 0);
@@ -1406,7 +1429,7 @@ function dmgPack(i, dm, towerIdx, weaponFx) {
         eboss[si] = 0;
         eSlow[si] = 0; eBurn[si] = 0; eBurnDmg[si] = 0;
         eExpose[si] = 0; eGlitch[si] = 0; eShatter[si] = 0;
-        eSplitChild[si] = 1;
+        eEntropy[si] = 0; eSplitChild[si] = 1;
       }
     }
     return;
@@ -1583,6 +1606,7 @@ function showTip() {
     if (eExpose[i] > 0) fxList += ' expose';
     if (eGlitch[i] > 0) fxList += ' glitch';
     if (eShatter[i]) fxList += ' shatter';
+    if (eEntropy[i] > 0) fxList += ` entropy(${eEntropy[i] | 0})`;
     tip.innerHTML = `${icon} ${name}${abLabel}<br>HP ${fmt(eh[i])} | Count ${fmt(ec[i])}${fxList ? '<br>Effects:' + fxList : ''}`;
     positionTip(x, y);
     return;
@@ -1647,6 +1671,7 @@ function upd(dt) {
     // Tick status effect timers
     if (eSlow[i] > 0) { eSlow[i] -= dt; es[i] = eBaseSpd[i] * 0.7; } else { es[i] = eBaseSpd[i]; }
     if (eExpose[i] > 0) eExpose[i] -= dt;
+    if (eEntropy[i] > 0) eEntropy[i] = Math.max(0, eEntropy[i] - dt * 0.5);
     if (eGlitch[i] > 0) { eGlitch[i] -= dt; es[i] = 0; }
     if (eBurn[i] > 0) {
       eBurn[i] -= dt;
@@ -1664,7 +1689,7 @@ function upd(dt) {
           eh[i]=eh[en];es[i]=es[en];eb[i]=eb[en];ek[i]=ek[en];eboss[i]=eboss[en];
           eSlow[i]=eSlow[en];eBurn[i]=eBurn[en];eBurnDmg[i]=eBurnDmg[en];
           eExpose[i]=eExpose[en];eGlitch[i]=eGlitch[en];eShatter[i]=eShatter[en];
-          eBaseSpd[i]=eBaseSpd[en];eSplitChild[i]=eSplitChild[en];
+          eBaseSpd[i]=eBaseSpd[en];eEntropy[i]=eEntropy[en];eSplitChild[i]=eSplitChild[en];
         }
         continue;
       }
@@ -1683,7 +1708,7 @@ function upd(dt) {
         eh[i]=eh[en];es[i]=es[en];eb[i]=eb[en];ek[i]=ek[en];eboss[i]=eboss[en];
         eSlow[i]=eSlow[en];eBurn[i]=eBurn[en];eBurnDmg[i]=eBurnDmg[en];
         eExpose[i]=eExpose[en];eGlitch[i]=eGlitch[en];eShatter[i]=eShatter[en];
-        eBaseSpd[i]=eBaseSpd[en];eSplitChild[i]=eSplitChild[en];
+        eBaseSpd[i]=eBaseSpd[en];eEntropy[i]=eEntropy[en];eSplitChild[i]=eSplitChild[en];
       }
       continue;
     }
@@ -1843,6 +1868,7 @@ function upd(dt) {
     updBest();
     if (wave >= maxWaves) {
       dead = 2;
+      runEndTime = performance.now();
       try { localStorage.removeItem(SAVE_KEY); } catch {}
       showNote(`VICTORY! ${DIFF[diff].n} mode cleared at wave ${wave}!`, 999);
       mkBar();
@@ -1861,6 +1887,7 @@ function upd(dt) {
   }
   if (core <= 0 && dead === 0) {
     dead = 1;
+    runEndTime = performance.now();
     try { localStorage.removeItem(SAVE_KEY); } catch {}
     showNote(`Defeated at wave ${wave}/${maxWaves}`, 999);
     mkBar();
@@ -2058,25 +2085,38 @@ function draw() {
   }
   // Game over summary (Feature 6)
   if (dead && menu.style.display === 'none') {
-    const elapsed = ((performance.now() - runStartTime) / 1000) | 0;
+    const endT = runEndTime || performance.now();
+    const elapsed = ((endT - runStartTime) / 1000) | 0;
     const minutes = (elapsed / 60) | 0;
     const seconds = elapsed % 60;
+    // Score: lower time is better, bonus for cores remaining and money
+    // Formula: base = wave * 1000 * difficultyMultiplier
+    //          timeBonus = max(0, (maxWaves * 30 - elapsed)) * 2
+    //          coreBonus = core * 50
+    //          moneyBonus = floor(money / 10)
+    const diffMul = 1 + diff * 0.5;
+    const baseScore = (wave * 1000 * diffMul) | 0;
+    const timePenalty = Math.min(baseScore * 0.5, elapsed * 2) | 0;
+    const coreBonus = (core * 50) | 0;
+    const moneyBonus = (money / 10) | 0;
+    const finalScore = Math.max(0, baseScore - timePenalty + coreBonus + moneyBonus);
     ctx.fillStyle = 'rgba(0,0,0,.55)';
     ctx.fillRect(0, 0, w, h);
     ctx.textAlign = 'center';
     ctx.fillStyle = dead === 2 ? 'rgba(120,255,180,.95)' : 'rgba(255,140,140,.95)';
     ctx.font = 'bold 28px monospace';
-    ctx.fillText(dead === 2 ? 'VICTORY' : 'DEFEATED', cx, cy - 80);
+    ctx.fillText(dead === 2 ? 'VICTORY' : 'DEFEATED', cx, cy - 100);
     ctx.fillStyle = 'rgba(220,240,255,.85)';
     ctx.font = '16px monospace';
-    ctx.fillText(`${DIFF[diff].n} | ${MAPS[mapIdx].n} | Wave ${wave}/${maxWaves}`, cx, cy - 50);
+    ctx.fillText(`${DIFF[diff].n} | ${MAPS[mapIdx].n} | Wave ${wave}/${maxWaves}`, cx, cy - 70);
     ctx.font = '13px monospace';
     ctx.fillStyle = 'rgba(200,220,240,.75)';
     const lines = [
       `Enemies destroyed: ${fmt(runTotalKills)}`,
       `Total damage dealt: ${fmt(runTotalDmg)}`,
       `Towers placed: ${tn}`,
-      `Time: ${minutes}m ${seconds}s`,
+      `Time: ${minutes}m ${String(seconds).padStart(2, '0')}s`,
+      `Core remaining: ${core}  |  Credits: ${fmt(money)}`,
     ];
     // Find MVP tower
     let mvpIdx = -1; let mvpDmg = 0;
@@ -2085,11 +2125,19 @@ function draw() {
       lines.push(`MVP: ${T[tt[mvpIdx]].i} ${T[tt[mvpIdx]].n} + ${W[tw[mvpIdx]].i} ${W[tw[mvpIdx]].n} (${fmt(tDmg[mvpIdx])} dmg, ${fmt(tKills[mvpIdx])} kills)`);
     }
     for (let i = 0; i < lines.length; i++) {
-      ctx.fillText(lines[i], cx, cy - 16 + i * 22);
+      ctx.fillText(lines[i], cx, cy - 36 + i * 22);
     }
+    // Score display
+    ctx.fillStyle = 'rgba(255,220,100,.95)';
+    ctx.font = 'bold 20px monospace';
+    const scoreY = cy - 36 + lines.length * 22 + 16;
+    ctx.fillText(`SCORE: ${fmt(finalScore)}`, cx, scoreY);
+    ctx.fillStyle = 'rgba(200,200,180,.5)';
+    ctx.font = '11px monospace';
+    ctx.fillText(`wave ${fmt(baseScore)} - time ${fmt(timePenalty)} + core ${fmt(coreBonus)} + credits ${fmt(moneyBonus)}`, cx, scoreY + 18);
     ctx.fillStyle = 'rgba(180,200,220,.6)';
     ctx.font = '12px monospace';
-    ctx.fillText('Press R or click restart to play again', cx, cy + lines.length * 22);
+    ctx.fillText('Press R or click restart to play again', cx, scoreY + 42);
     ctx.textAlign = 'left';
     // Save personal best stats (once per game over)
     if (!statsSaved) {
@@ -2102,6 +2150,7 @@ function draw() {
         if (!stats.bestWave || wave > stats.bestWave) stats.bestWave = wave;
         if (!stats.bestDiff || diff > stats.bestDiff) stats.bestDiff = diff;
         stats.totalKills = (stats.totalKills || 0) + runTotalKills;
+        if (!stats.bestScore || finalScore > stats.bestScore) stats.bestScore = finalScore;
         localStorage.setItem(statsKey, JSON.stringify(stats));
       } catch {}
     }
@@ -2310,11 +2359,12 @@ function saveGame() {
     eBurnDmg: Array.from(eBurnDmg.subarray(0, en)), eExpose: Array.from(eExpose.subarray(0, en)),
     eGlitch: Array.from(eGlitch.subarray(0, en)), eShatter: Array.from(eShatter.subarray(0, en)),
     eSplitChild: Array.from(eSplitChild.subarray(0, en)),
+    eEntropy: Array.from(eEntropy.subarray(0, en)),
     fn, fp: Array.from(fp.subarray(0, fn)), fs: Array.from(fs.subarray(0, fn)),
     fd: Array.from(fd.subarray(0, fn)), fl: Array.from(fl.subarray(0, fn)),
     fcd: Array.from(fcd.subarray(0, fn)), ft: Array.from(ft.subarray(0, fn)),
     fxp: Array.from(fxp.subarray(0, fn)), fyp: Array.from(fyp.subarray(0, fn)),
-    runTotalKills, runTotalDmg, runStartTime,
+    runTotalKills, runTotalDmg, runStartTime, runEndTime,
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch {}
 }
@@ -2351,6 +2401,7 @@ function loadGame() {
     eGlitch[i] = s.eGlitch ? s.eGlitch[i] : 0;
     eShatter[i] = s.eShatter ? s.eShatter[i] : 0;
     eSplitChild[i] = s.eSplitChild ? s.eSplitChild[i] : 0;
+    eEntropy[i] = s.eEntropy ? s.eEntropy[i] : 0;
     const u = ep[i] * (ps - 1);
     let j = u | 0; let f = u - j;
     if (j >= ps - 1) { j = ps - 2; f = 1; }
@@ -2365,6 +2416,7 @@ function loadGame() {
   runTotalKills = s.runTotalKills || 0;
   runTotalDmg = s.runTotalDmg || 0;
   runStartTime = s.runStartTime || performance.now();
+  runEndTime = s.runEndTime || 0;
   pn = 0; pHead = 0;
   setSpeed(s.speedIdx);
   dead = 0;
