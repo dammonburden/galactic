@@ -60,6 +60,7 @@ export const MEGA_BOSS = {
 };
 
 export const DIFFICULTIES = [
+  { n: 'Ultra Easy', waves: Infinity, hpMul: 0.35, spdMul: 0.55, money: 600, coreDmgMul: 0.25, desc: 'Infinite relaxed sandbox' },
   { n: 'Easy', waves: 70, hpMul: 0.75, spdMul: 0.85, money: 340, coreDmgMul: 0.7, desc: 'Relaxed — but stay sharp' },
   { n: 'Intermediate', waves: 110, hpMul: 1.0, spdMul: 0.98, money: 280, coreDmgMul: 0.95, desc: 'A real challenge' },
   { n: 'Hard', waves: 150, hpMul: 1.25, spdMul: 1.08, money: 240, coreDmgMul: 1.2, desc: 'Demands sharp strategy' },

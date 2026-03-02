@@ -51,7 +51,7 @@ let selW = [0, 1, 2];
 let st = 0;
 let sw = 0;
 let paused = 0;
-let diff = 2;
+let diff = 3;
 let maxWaves = 40;
 let mapIdx = 0;
 
@@ -374,8 +374,10 @@ adminReset.addEventListener('click', () => {
 });
 
 function mkBtns(el, arr, k) {
+  const sorted = arr.map((_, i) => i).sort((a, b) => arr[a].c - arr[b].c);
   let s = '';
-  for (let i = 0; i < arr.length; i++) {
+  for (let j = 0; j < sorted.length; j++) {
+    const i = sorted[j];
     const x = arr[i];
     s += `<button data-k=${k} data-i=${i}><span>${x.i}</span><b>${x.n}</b><i>${x.c}</i></button>`;
   }
@@ -389,7 +391,7 @@ function mkDiffBtns() {
   let s = '';
   for (let i = 0; i < DIFF.length; i++) {
     const d = DIFF[i];
-    s += `<button data-d=${i} class=${i === diff ? 'sel' : ''}>${d.n}<small>${d.waves} waves — ${d.desc}</small></button>`;
+    s += `<button data-d=${i} class=${i === diff ? 'sel' : ''}>${d.n}<small>${Number.isFinite(d.waves) ? d.waves : '∞'} waves — ${d.desc}</small></button>`;
   }
   diffRow.innerHTML = s;
 }
@@ -420,13 +422,15 @@ mapRow.addEventListener('click', (e) => {
 });
 
 function applySel() {
+  selT.sort((a, b) => T[a].c - T[b].c);
+  selW.sort((a, b) => W[a].c - W[b].c);
   for (let i = 0; i < tl.children.length; i++) {
     const b = tl.children[i];
-    b.classList.toggle('sel', selT.indexOf(i) >= 0);
+    b.classList.toggle('sel', selT.indexOf(+b.dataset.i) >= 0);
   }
   for (let i = 0; i < wl.children.length; i++) {
     const b = wl.children[i];
-    b.classList.toggle('sel', selW.indexOf(i) >= 0);
+    b.classList.toggle('sel', selW.indexOf(+b.dataset.i) >= 0);
   }
   tc.textContent = `${selT.length}/4`;
   wc.textContent = `${selW.length}/3`;
@@ -1474,7 +1478,7 @@ function place(x, y, ti, wi) {
 
 function pickTower(x, y) {
   for (let i = tn - 1; i >= 0; i--) {
-    const r = 16 + tier[i] * 1.5;
+    const r = (26 + Math.min(20, tier[i] * 2)) * 0.5 + 4;
     if (dist2(x, y, tx[i], ty[i]) < r * r) return i;
   }
   return -1;
@@ -1545,7 +1549,7 @@ function spawnFriendly(x, y, amt, type) {
 }
 
 function ui() {
-  waveE.textContent = `${wave}/${maxWaves}`;
+  waveE.textContent = `${wave}/${Number.isFinite(maxWaves) ? maxWaves : '∞'}`;
   crE.textContent = fmt(money);
   coreE.textContent = Math.max(0, core | 0);
   scE.textContent = best;
@@ -1879,7 +1883,7 @@ function upd(dt) {
       bank = toInt(money);
       money = toInt(bank * gs.bankInterest);
       const intPct = Math.round((gs.bankInterest - 1) * 100);
-      showNote(`Wave ${wave}/${maxWaves} cleared +${fmt(waveBonus)}c bonus +${intPct}% bank`);
+      showNote(`Wave ${wave}/${Number.isFinite(maxWaves) ? maxWaves : '∞'} cleared +${fmt(waveBonus)}c bonus +${intPct}% bank`);
       wave++;
       wait = gs.waitTime;
       calcWavePreview();
@@ -1889,7 +1893,7 @@ function upd(dt) {
     dead = 1;
     runEndTime = performance.now();
     try { localStorage.removeItem(SAVE_KEY); } catch {}
-    showNote(`Defeated at wave ${wave}/${maxWaves}`, 999);
+    showNote(`Defeated at wave ${wave}/${Number.isFinite(maxWaves) ? maxWaves : '∞'}`, 999);
     mkBar();
     tip.style.opacity = 0;
   }
@@ -2108,7 +2112,7 @@ function draw() {
     ctx.fillText(dead === 2 ? 'VICTORY' : 'DEFEATED', cx, cy - 100);
     ctx.fillStyle = 'rgba(220,240,255,.85)';
     ctx.font = '16px monospace';
-    ctx.fillText(`${DIFF[diff].n} | ${MAPS[mapIdx].n} | Wave ${wave}/${maxWaves}`, cx, cy - 70);
+    ctx.fillText(`${DIFF[diff].n} | ${MAPS[mapIdx].n} | Wave ${wave}/${Number.isFinite(maxWaves) ? maxWaves : '∞'}`, cx, cy - 70);
     ctx.font = '13px monospace';
     ctx.fillStyle = 'rgba(200,220,240,.75)';
     const lines = [
@@ -2342,7 +2346,7 @@ function saveGame() {
   const s = {
     v: 3, wave, money, bank, core, best, sel, st, sw, paused,
     speedIdx, timeScale, wait, pendingPacks, spawnTick, bossPending, megaPending,
-    diff, maxWaves, mapIdx,
+    diff, maxWaves: Number.isFinite(maxWaves) ? maxWaves : -1, mapIdx,
     selT, selW,
     tn, tt: Array.from(tt.subarray(0, tn)), tw: Array.from(tw.subarray(0, tn)),
     tx: Array.from(tx.subarray(0, tn)), ty: Array.from(ty.subarray(0, tn)),
@@ -2373,7 +2377,7 @@ function loadGame() {
   let s;
   try { s = JSON.parse(localStorage.getItem(SAVE_KEY)); } catch { return false; }
   if (!s || (s.v !== 1 && s.v !== 2 && s.v !== 3)) return false;
-  diff = s.diff ?? 2; maxWaves = s.maxWaves ?? 40; mapIdx = s.mapIdx ?? 0;
+  diff = s.diff ?? 3; maxWaves = s.maxWaves === -1 ? Infinity : (s.maxWaves ?? 40); mapIdx = s.mapIdx ?? 0;
   selT = s.selT; selW = s.selW; st = s.st; sw = s.sw;
   wave = s.wave; money = s.money; bank = s.bank; core = s.core; best = s.best;
   sel = s.sel; paused = 1; wait = s.wait;
