@@ -9,7 +9,7 @@ export const TOWERS = [
   { n: 'Forge Turret', i: '🏭', c: 130, r: 160, rm: 1.0, fr: 1.12 },
   { n: 'Genesis Foundry', i: '🧬', c: 140, r: 140, rm: 1.0, fr: 0.85, spawn: 1 },
   { n: 'Rift Obelisk', i: '🌀', c: 150, r: 176, rm: 1.06, fr: 1.04 },
-  { n: 'Brawler Forge', i: '👊', c: 155, r: 130, rm: 1.0, fr: 0.8, spawn: 2 },
+  { n: 'Brawler Forge', i: '👊', c: 140, r: 142, rm: 1.0, fr: 0.8, spawn: 2 },
   { n: 'Airdrop Bay', i: '🪂', c: 160, r: 120, rm: 1.0, fr: 0.75, spawn: 3 },
 ];
 
