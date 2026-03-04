@@ -1163,9 +1163,14 @@ function mkBar() {
     else if (money < cost) tipText += ` (Need ${fmt(cost - money)} more credits)`;
     upB.title = tipText;
     upB.disabled = t >= gs.maxTier || money < cost;
+    const sellVal = base * (0.85 + 0.35 * t) * gs.sellRefundMul;
+    sellBtn.disabled = false;
+    sellBtn.title = `Sell for ${fmt(toInt(sellVal))}c (S)`;
   } else {
     upB.disabled = true;
     upB.title = '';
+    sellBtn.disabled = true;
+    sellBtn.title = '';
   }
   pauseBtn.textContent = paused ? '▶' : '⏸';
   pauseBtn.classList.toggle('playing', !paused && !dead);
@@ -1177,7 +1182,7 @@ function mkBar() {
     : paused
       ? 'Paused. Click ▶ or press Space to resume.'
       : sel >= 0
-        ? `Selected: ${T[tt[sel]].n} + ${W[tw[sel]].n} Tier ${tier[sel]} (U to upgrade, right click sell)`
+        ? `Selected: ${T[tt[sel]].n} + ${W[tw[sel]].n} Tier ${tier[sel]} (U to upgrade, S to sell)`
         : `Click to place ${T[selT[st]].n} with ${W[selW[sw]].n}.`;
 }
 
@@ -1538,6 +1543,11 @@ function spawnFriendly(x, y, amt, type) {
   fd[i] = 8 + amt * 1.2;
   fl[i] = 180 + amt * 12;
   fcd[i] = 0;
+  if (type === 2) {
+    fs[i] *= 1.18;
+    fd[i] *= 1.35;
+    fl[i] *= 1.25;
+  }
   if (type === 3) {
     fxp[i] = cx + (rng() - 0.5) * w * 0.7;
     fyp[i] = cy + (rng() - 0.5) * h * 0.7;
@@ -1562,8 +1572,8 @@ function showNote(text, time = 2.2) {
 }
 
 function setSpeed(idx) {
-  speedIdx = Math.max(0, Math.min(3, idx));
-  timeScale = [1, 5, 50, 500][speedIdx] || 1;
+  speedIdx = Math.max(0, Math.min(4, idx));
+  timeScale = [1, 5, 50, 500, 5000][speedIdx] || 1;
   [...speed.children].forEach((btn, i) => btn.classList.toggle('on', i === speedIdx));
 }
 
@@ -2231,6 +2241,8 @@ addEventListener('keydown', (e) => {
     mkBar();
   } else if (k === 'u' || k === 'U') {
     if (sel >= 0) upgrade(sel);
+  } else if (k === 's' || k === 'S') {
+    if (sel >= 0) sell(sel);
   } else if (k === 'r' || k === 'R') {
     confirmRestart();
   } else if (k === '[' || k === '{' || k === '-' || k === '_') {
@@ -2309,7 +2321,7 @@ ws.addEventListener('pointerover', handlePanelOver);
 ts.addEventListener('pointerout', handlePanelOut);
 ws.addEventListener('pointerout', handlePanelOut);
 
-speed.innerHTML = ['1x', '5x', '50x', '500x'].map((label, i) => `<button data-i=${i} class=${i === 0 ? 'on' : ''}>${label}</button>`).join('');
+speed.innerHTML = ['1x', '5x', '50x', '500x', '5000x'].map((label, i) => `<button data-i=${i} class=${i === 0 ? 'on' : ''}>${label}</button>`).join('');
 speed.onclick = (e) => {
   if (menu.style.display !== 'none') return;
   const b = e.target.closest('button');
@@ -2335,6 +2347,10 @@ pauseBtn.onclick = () => {
   paused = !paused;
   if (paused) showNote('Paused', 1.2);
   mkBar();
+};
+
+sellBtn.onclick = () => {
+  if (sel >= 0) sell(sel);
 };
 
 restartBtn.onclick = () => {
